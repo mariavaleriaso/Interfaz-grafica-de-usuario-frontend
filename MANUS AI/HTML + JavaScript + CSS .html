@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Predicción Bursátil Inteligente</title>
+    <!-- Importar Plotly.js desde CDN -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        /* Paleta de colores y estilos base */
+        :root {
+            --color-fondo: #ffffff;
+            --color-alcista: #26A69A;
+            --color-bajista: #EF5350;
+            --color-azul-oscuro: #1F3864;
+            --color-dorado: #C5961A;
+            --color-texto: #333333;
+            --color-gris-claro: #f4f4f4;
+            --color-borde: #dddddd;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--color-fondo);
+            color: var(--color-texto);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout responsivo con CSS Grid */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            grid-template-rows: auto 1fr;
+            height: 100%;
+        }
+
+        header {
+            grid-column: 1 / span 2;
+            background-color: var(--color-azul-oscuro);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--color-dorado);
+        }
+
+        .main-content {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background-color: var(--color-gris-claro);
+            border-left: 1px solid var(--color-borde);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            font-size: 0.9rem;
+            color: var(--color-azul-oscuro);
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid var(--color-borde);
+            padding-bottom: 0.3rem;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .data-value {
+            font-weight: bold;
+        }
+
+        .positive { color: var(--color-alcista); }
+        .negative { color: var(--color-bajista); }
+
+        /* Controles y Pestañas */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            background: var(--color-gris-claro);
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: var(--color-azul-oscuro);
+            color: white;
+        }
+
+        select {
+            padding: 0.5rem;
+            border: 1px solid var(--color-borde);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        /* Gráfico */
+        #chart-container {
+            flex-grow: 1;
+            min-height: 500px;
+            background: white;
+            border: 1px solid var(--color-borde);
+            border-radius: 8px;
+        }
+
+        /* Responsividad */
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr;
+            }
+            .sidebar {
+                grid-row: 3;
+                border-left: none;
+                border-top: 1px solid var(--color-borde);
+            }
+            #chart-container {
+                min-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Predicción Bursátil Inteligente</h1>
+            <div id="current-time">--:--:--</div>
+        </header>
+
+        <main class="main-content">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="changeTab('acciones')">Acciones</button>
+                <button class="tab-btn" onclick="changeTab('criptomonedas')">Criptomonedas</button>
+            </div>
+
+            <div class="controls">
+                <div>
+                    <label for="ticker-select">Activo:</label>
+                    <select id="ticker-select" onchange="updateDashboard()">
+                        <!-- Se llenará dinámicamente -->
+                    </select>
+                </div>
+                <div>
+                    <label for="period-select">Período:</label>
+                    <select id="period-select" onchange="updateDashboard()">
+                        <option value="30">1M</option>
+                        <option value="90" selected>3M</option>
+                        <option value="180">6M</option>
+                        <option value="365">1A</option>
+                        <option value="730">2A</option>
+                        <option value="1825">5A</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="chart-container"></div>
+        </main>
+
+        <aside class="sidebar">
+            <div class="card">
+                <h3>Resumen de Mercado</h3>
+                <div class="data-row">
+                    <span>Precio Actual:</span>
+                    <span id="side-price" class="data-value">--</span>
+                </div>
+                <div class="data-row">
+                    <span>Var. Diaria:</span>
+                    <span id="side-change" class="data-value">--</span>
+                </div>
+                <div class="data-row">
+                    <span>Volumen:</span>
+                    <span id="side-volume" class="data-value">--</span>
+                </div>
+                <div id="crypto-only-data">
+                    <div class="data-row">
+                        <span>Market Cap:</span>
+                        <span id="side-mcap" class="data-value">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Indicadores Técnicos</h3>
+                <div class="data-row">
+                    <span>SMA 20:</span>
+                    <span id="val-sma20" class="data-value">--</span>
+                </div>
+                <div class="data-row">
+                    <span>SMA 50:</span>
+                    <span id="val-sma50" class="data-value">--</span>
+                </div>
+                <div class="data-row">
+                    <span>EMA 12:</span>
+                    <span id="val-ema12" class="data-value">--</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Configuración de activos
+        const assets = {
+            acciones: ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'NVDA'],
+            criptomonedas: ['BTC-USD', 'ETH-USD']
+        };
+
+        let currentCategory = 'acciones';
+        let currentTicker = 'AAPL';
+        let currentData = [];
+
+        // Inicialización
+        window.onload = () => {
+            populateTickers();
+            updateDashboard();
+            startClock();
+            startRealTimeSimulation();
+        };
+
+        // Función para cambiar de pestaña
+        function changeTab(category) {
+            currentCategory = category;
+            
+            // Actualizar botones de pestañas
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.toLowerCase() === category);
+            });
+
+            // Mostrar/Ocultar datos de cripto
+            document.getElementById('crypto-only-data').style.display = (category === 'criptomonedas') ? 'block' : 'none';
+
+            populateTickers();
+            updateDashboard();
+        }
+
+        // Poblar el selector de tickers según la categoría
+        function populateTickers() {
+            const select = document.getElementById('ticker-select');
+            select.innerHTML = '';
+            assets[currentCategory].forEach(ticker => {
+                const option = document.createElement('option');
+                option.value = ticker;
+                option.text = ticker;
+                select.appendChild(option);
+            });
+            currentTicker = select.value;
+        }
+
+        // Generación de datos simulados realistas
+        function generateSimulatedData(ticker, days) {
+            const data = [];
+            let currentPrice = ticker.includes('BTC') ? 65000 : (ticker.includes('ETH') ? 3500 : 150);
+            let date = new Date();
+            date.setDate(date.getDate() - days);
+
+            for (let i = 0; i < days; i++) {
+                const volatility = currentPrice * 0.02;
+                const open = currentPrice + (Math.random() - 0.5) * volatility;
+                const high = open + Math.random() * volatility;
+                const low = open - Math.random() * volatility;
+                const close = low + Math.random() * (high - low);
+                const volume = Math.floor(Math.random() * 1000000) + 500000;
+
+                data.push({
+                    date: new Date(date),
+                    open: open,
+                    high: high,
+                    low: low,
+                    close: close,
+                    volume: volume
+                });
+
+                currentPrice = close;
+                date.setDate(date.getDate() + 1);
+            }
+            return data;
+        }
+
+        // Cálculos de indicadores técnicos (JavaScript Puro)
+        function calculateSMA(data, period) {
+            const sma = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < period - 1) {
+                    sma.push(null);
+                } else {
+                    const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b.close, 0);
+                    sma.push(sum / period);
+                }
+            }
+            return sma;
+        }
+
+        function calculateEMA(data, period) {
+            const ema = [];
+            const k = 2 / (period + 1);
+            let previousEma = data[0].close;
+            
+            for (let i = 0; i < data.length; i++) {
+                if (i === 0) {
+                    ema.push(previousEma);
+                } else {
+                    const currentEma = (data[i].close - previousEma) * k + previousEma;
+                    ema.push(currentEma);
+                    previousEma = currentEma;
+                }
+            }
+            return ema;
+        }
+
+        // Actualizar el Dashboard completo
+        function updateDashboard() {
+            const ticker = document.getElementById('ticker-select').value;
+            const period = parseInt(document.getElementById('period-select').value);
+            currentTicker = ticker;
+
+            const data = generateSimulatedData(ticker, period);
+            currentData = data;
+
+            renderChart(data, ticker);
+            updateSidebar(data);
+        }
+
+        // Renderizado con Plotly.js
+        function renderChart(data, ticker) {
+            const dates = data.map(d => d.date);
+            const opens = data.map(d => d.open);
+            const highs = data.map(d => d.high);
+            const lows = data.map(d => d.low);
+            const closes = data.map(d => d.close);
+            const volumes = data.map(d => d.volume);
+
+            // Colores de volumen
+            const volumeColors = data.map(d => d.close >= d.open ? '#26A69A' : '#EF5350');
+
+            // Indicadores
+            const sma20 = calculateSMA(data, 20);
+            const sma50 = calculateSMA(data, 50);
+            const ema12 = calculateEMA(data, 12);
+
+            const traceCandle = {
+                x: dates,
+                open: opens,
+                high: highs,
+                low: lows,
+                close: closes,
+                type: 'candlestick',
+                name: ticker,
+                increasing: { line: { color: '#26A69A' } },
+                decreasing: { line: { color: '#EF5350' } },
+                xaxis: 'x',
+                yaxis: 'y'
+            };
+
+            const traceSMA20 = {
+                x: dates, y: sma20, type: 'scatter', mode: 'lines',
+                name: 'SMA 20', line: { color: 'rgba(31, 56, 100, 0.7)', width: 1.5 },
+                xaxis: 'x', yaxis: 'y'
+            };
+
+            const traceSMA50 = {
+                x: dates, y: sma50, type: 'scatter', mode: 'lines',
+                name: 'SMA 50', line: { color: 'rgba(197, 150, 26, 0.7)', width: 1.5 },
+                xaxis: 'x', yaxis: 'y'
+            };
+
+            const traceEMA12 = {
+                x: dates, y: ema12, type: 'scatter', mode: 'lines',
+                name: 'EMA 12', line: { color: 'rgba(100, 100, 100, 0.7)', width: 1.5, dash: 'dot' },
+                xaxis: 'x', yaxis: 'y'
+            };
+
+            const traceVolume = {
+                x: dates,
+                y: volumes,
+                type: 'bar',
+                name: 'Volumen',
+                marker: { color: volumeColors },
+                xaxis: 'x',
+                yaxis: 'y2'
+            };
+
+            const layout = {
+                dragmode: 'zoom',
+                showlegend: true,
+                legend: { orientation: 'h', y: 1.1 },
+                margin: { r: 50, t: 30, b: 50, l: 50 },
+                xaxis: {
+                    autorange: true,
+                    rangeslider: { visible: true },
+                    type: 'date',
+                    domain: [0, 1]
+                },
+                yaxis: {
+                    autorange: true,
+                    domain: [0.3, 1],
+                    title: 'Precio'
+                },
+                yaxis2: {
+                    autorange: true,
+                    domain: [0, 0.25],
+                    title: 'Volumen'
+                },
+                plot_bgcolor: '#ffffff',
+                paper_bgcolor: '#ffffff'
+            };
+
+            const config = { responsive: true };
+
+            Plotly.newPlot('chart-container', [traceCandle, traceSMA20, traceSMA50, traceEMA12, traceVolume], layout, config);
+        }
+
+        // Actualizar panel lateral
+        function updateSidebar(data) {
+            const last = data[data.length - 1];
+            const prev = data[data.length - 2];
+            const change = ((last.close - prev.close) / prev.close) * 100;
+
+            const priceEl = document.getElementById('side-price');
+            const changeEl = document.getElementById('side-change');
+            
+            priceEl.innerText = `$${last.close.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            changeEl.innerText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+            changeEl.className = `data-value ${change >= 0 ? 'positive' : 'negative'}`;
+
+            document.getElementById('side-volume').innerText = last.volume.toLocaleString();
+            
+            if (currentCategory === 'criptomonedas') {
+                const mcap = last.close * (currentTicker === 'BTC-USD' ? 19000000 : 120000000);
+                document.getElementById('side-mcap').innerText = `$${(mcap / 1e9).toFixed(2)}B`;
+            }
+
+            // Indicadores en el panel
+            const sma20 = calculateSMA(data, 20);
+            const sma50 = calculateSMA(data, 50);
+            const ema12 = calculateEMA(data, 12);
+
+            document.getElementById('val-sma20').innerText = sma20[sma20.length - 1]?.toFixed(2) || '--';
+            document.getElementById('val-sma50').innerText = sma50[sma50.length - 1]?.toFixed(2) || '--';
+            document.getElementById('val-ema12').innerText = ema12[ema12.length - 1]?.toFixed(2) || '--';
+        }
+
+        // Simulación de tiempo real
+        function startRealTimeSimulation() {
+            setInterval(() => {
+                if (currentData.length === 0) return;
+                
+                const lastIdx = currentData.length - 1;
+                const last = currentData[lastIdx];
+                
+                // Variación aleatoria pequeña
+                const variation = (Math.random() - 0.5) * (last.close * 0.001);
+                last.close += variation;
+                if (last.close > last.high) last.high = last.close;
+                if (last.close < last.low) last.low = last.close;
+
+                updateSidebar(currentData);
+                
+                // Actualizar solo el último punto del gráfico para eficiencia si fuera necesario,
+                // pero por simplicidad y cumplimiento de requisitos de Plotly, redibujamos o usamos restyle.
+                // Aquí usamos restyle para el precio de cierre de la vela.
+                Plotly.restyle('chart-container', {
+                    close: [currentData.map(d => d.close)],
+                    high: [currentData.map(d => d.high)],
+                    low: [currentData.map(d => d.low)]
+                }, [0]);
+            }, 2000);
+        }
+
+        function startClock() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('current-time').innerText = now.toLocaleTimeString();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
