@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvestAI - Regresión de Precios LSTM</title>
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI',sans-serif;
+}
+
+body{
+    background:#0f172a;
+    color:white;
+}
+
+.header{
+    background:#111827;
+    padding:20px;
+    border-bottom:1px solid #1f2937;
+}
+
+.header h1{
+    color:#38bdf8;
+}
+
+.container{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:20px;
+    padding:20px;
+}
+
+.sidebar{
+    background:#111827;
+    border-radius:12px;
+    padding:20px;
+}
+
+.main{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+}
+
+.card{
+    background:#111827;
+    border-radius:12px;
+    padding:20px;
+}
+
+.metric-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:15px;
+}
+
+.metric{
+    background:#1e293b;
+    padding:15px;
+    border-radius:10px;
+    text-align:center;
+}
+
+.metric h4{
+    color:#94a3b8;
+    margin-bottom:10px;
+}
+
+.metric .value{
+    font-size:1.6rem;
+    font-weight:bold;
+    color:#22c55e;
+}
+
+.param{
+    margin-bottom:18px;
+}
+
+.param label{
+    display:block;
+    margin-bottom:8px;
+    color:#cbd5e1;
+}
+
+.param input{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    background:#1e293b;
+    color:white;
+}
+
+.slider-container{
+    margin-top:15px;
+}
+
+.slider-container input{
+    width:100%;
+}
+
+.pred-value{
+    color:#38bdf8;
+    font-weight:bold;
+    margin-top:10px;
+}
+
+.section-title{
+    margin-bottom:15px;
+    color:#38bdf8;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    background:#2563eb;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#1d4ed8;
+}
+
+@media(max-width:1000px){
+.container{
+    grid-template-columns:1fr;
+}
+
+.metric-grid{
+    grid-template-columns:repeat(2,1fr);
+}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📈 InvestAI - Módulo de Regresión de Precios</h1>
+    <p>LSTM Regressor (64 unidades) + ARIMA-LSTM Ensemble</p>
+</div>
+
+<div class="container">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+        <h2 class="section-title">⚙ Parámetros Técnicos</h2>
+
+        <div class="param">
+            <label>Épocas</label>
+            <input type="number" value="100">
+        </div>
+
+        <div class="param">
+            <label>Dropout</label>
+            <input type="number" step="0.01" value="0.20">
+        </div>
+
+        <div class="param">
+            <label>Batch Size</label>
+            <input type="number" value="32">
+        </div>
+
+        <div class="param">
+            <label>Ventana Temporal</label>
+            <input type="number" value="60">
+        </div>
+
+        <div class="param">
+            <label>Learning Rate</label>
+            <input type="number" step="0.0001" value="0.001">
+        </div>
+
+        <button>Actualizar Modelo</button>
+
+        <div class="slider-container">
+            <h3 class="section-title">🔮 Predicción Futura</h3>
+
+            <label>Días a visualizar</label>
+
+            <input
+                type="range"
+                min="1"
+                max="30"
+                value="30"
+                id="futureSlider"
+            >
+
+            <div class="pred-value">
+                Horizonte: <span id="daysValue">30</span> días
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <!-- MÉTRICAS -->
+        <div class="card">
+
+            <h2 class="section-title">📊 Métricas de Rendimiento</h2>
+
+            <div class="metric-grid">
+
+                <div class="metric">
+                    <h4>RMSE (USD)</h4>
+                    <div class="value">$3.28</div>
+                </div>
+
+                <div class="metric">
+                    <h4>RMSE (%)</h4>
+                    <div class="value">2.11%</div>
+                </div>
+
+                <div class="metric">
+                    <h4>MAE</h4>
+                    <div class="value">$2.54</div>
+                </div>
+
+                <div class="metric">
+                    <h4>R²</h4>
+                    <div class="value">0.94</div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- GRÁFICO -->
+        <div class="card">
+
+            <h2 class="section-title">
+                📈 Comparación de Predicciones
+            </h2>
+
+            <div id="regressionChart"
+                 style="height:650px;">
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+// -----------------------------
+// DATOS HISTÓRICOS SIMULADOS
+// -----------------------------
+
+const real = [];
+const lstm = [];
+const arimaLstm = [];
+
+for(let i=0;i<120;i++){
+
+    let price =
+        180 +
+        Math.sin(i/7)*8 +
+        i*0.15 +
+        (Math.random()*4-2);
+
+    real.push(price);
+
+    lstm.push(
+        price +
+        (Math.random()*3-1.5)
+    );
+
+    arimaLstm.push(
+        price +
+        (Math.random()*2.2-1.1)
+    );
+}
+
+// -----------------------------
+// FUTURE FORECAST
+// -----------------------------
+
+const futureDays = 30;
+
+const forecast = [];
+const upperBand = [];
+const lowerBand = [];
+
+let lastPrice = real[real.length-1];
+
+for(let i=1;i<=futureDays;i++){
+
+    let pred =
+        lastPrice +
+        i*0.45 +
+        Math.sin(i/3);
+
+    forecast.push(pred);
+
+    upperBand.push(pred+4);
+    lowerBand.push(pred-4);
+}
+
+// -----------------------------
+// EJE X
+// -----------------------------
+
+const historicalX =
+    [...Array(real.length).keys()]
+    .map(v=>"Día "+(v+1));
+
+const futureX =
+    [...Array(futureDays).keys()]
+    .map(v=>"F+"+(v+1));
+
+// -----------------------------
+// TRAZAS
+// -----------------------------
+
+const traceReal = {
+    x: historicalX,
+    y: real,
+    mode:'lines',
+    name:'Precio Real',
+    line:{
+        color:'#3b82f6',
+        width:3
+    }
+};
+
+const traceLSTM = {
+    x: historicalX,
+    y: lstm,
+    mode:'lines',
+    name:'LSTM',
+    line:{
+        color:'#ef4444',
+        width:3,
+        dash:'dash'
+    }
+};
+
+const traceARIMA = {
+    x: historicalX,
+    y: arimaLstm,
+    mode:'lines',
+    name:'ARIMA-LSTM',
+    line:{
+        color:'#22c55e',
+        width:3,
+        dash:'dash'
+    }
+};
+
+// Banda inferior
+const confidenceLow = {
+    x: futureX,
+    y: lowerBand,
+    mode:'lines',
+    line:{color:'transparent'},
+    showlegend:false
+};
+
+// Banda superior
+const confidenceHigh = {
+    x: futureX,
+    y: upperBand,
+    fill:'tonexty',
+    fillcolor:'rgba(59,130,246,0.2)',
+    mode:'lines',
+    line:{color:'transparent'},
+    name:'Banda de Confianza'
+};
+
+const futurePrediction = {
+    x: futureX,
+    y: forecast,
+    mode:'lines',
+    name:'Predicción 30 días',
+    line:{
+        color:'#facc15',
+        width:4
+    }
+};
+
+const layout = {
+
+    paper_bgcolor:'#111827',
+    plot_bgcolor:'#111827',
+
+    font:{
+        color:'white'
+    },
+
+    title:{
+        text:'Predicción de Precios USD'
+    },
+
+    xaxis:{
+        title:'Tiempo',
+        gridcolor:'#374151'
+    },
+
+    yaxis:{
+        title:'Precio (USD)',
+        gridcolor:'#374151'
+    },
+
+    hovermode:'x unified',
+
+    legend:{
+        orientation:'h'
+    }
+};
+
+Plotly.newPlot(
+    'regressionChart',
+    [
+        traceReal,
+        traceLSTM,
+        traceARIMA,
+        confidenceLow,
+        confidenceHigh,
+        futurePrediction
+    ],
+    layout,
+    {
+        responsive:true
+    }
+);
+
+// -----------------------------
+// SLIDER
+// -----------------------------
+
+const slider =
+document.getElementById("futureSlider");
+
+const daysLabel =
+document.getElementById("daysValue");
+
+slider.addEventListener("input",()=>{
+
+    daysLabel.textContent =
+    slider.value;
+
+});
+
+</script>
+
+</body>
+</html>

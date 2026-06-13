@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>InvestAI Dashboard</title>
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Segoe UI',sans-serif;
+}
+
+body{
+background:#f5f7fb;
+display:flex;
+height:100vh;
+overflow:hidden;
+}
+
+:root{
+--blue:#1F3864;
+--gold:#C5961A;
+--green:#16a34a;
+--red:#dc2626;
+--orange:#f59e0b;
+}
+
+.sidebar{
+width:260px;
+background:var(--blue);
+color:white;
+padding:25px;
+display:flex;
+flex-direction:column;
+}
+
+.logo{
+font-size:28px;
+font-weight:700;
+margin-bottom:40px;
+color:white;
+}
+
+.logo span{
+color:var(--gold);
+}
+
+.menu{
+display:flex;
+flex-direction:column;
+gap:12px;
+}
+
+.menu a{
+text-decoration:none;
+color:white;
+padding:14px;
+border-radius:10px;
+transition:.3s;
+}
+
+.menu a:hover{
+background:rgba(255,255,255,.1);
+}
+
+.menu a.active{
+background:var(--gold);
+}
+
+.main{
+flex:1;
+padding:25px;
+overflow-y:auto;
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
+}
+
+.header h1{
+color:var(--blue);
+}
+
+.cards{
+display:grid;
+grid-template-columns:2fr 1fr;
+gap:20px;
+margin-bottom:20px;
+}
+
+.card{
+background:white;
+border-radius:15px;
+padding:20px;
+box-shadow:0 3px 15px rgba(0,0,0,.08);
+}
+
+.card-title{
+font-size:18px;
+font-weight:600;
+margin-bottom:15px;
+color:var(--blue);
+}
+
+#candlestick{
+height:450px;
+}
+
+.signals{
+display:flex;
+flex-direction:column;
+gap:20px;
+}
+
+.signal{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:18px;
+border-radius:12px;
+border:1px solid #e5e7eb;
+}
+
+.signal-left{
+display:flex;
+align-items:center;
+gap:15px;
+}
+
+.dot{
+width:18px;
+height:18px;
+border-radius:50%;
+}
+
+.buy{
+background:var(--green);
+}
+
+.sell{
+background:var(--red);
+}
+
+.hold{
+background:var(--orange);
+}
+
+.signal h3{
+font-size:28px;
+}
+
+.buy-text{
+color:var(--green);
+}
+
+.sell-text{
+color:var(--red);
+}
+
+.hold-text{
+color:var(--orange);
+}
+
+.confidence{
+font-size:22px;
+font-weight:700;
+color:var(--blue);
+}
+
+.table-card{
+margin-bottom:20px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+thead{
+background:var(--blue);
+color:white;
+}
+
+th,td{
+padding:14px;
+text-align:center;
+}
+
+tbody tr:nth-child(even){
+background:#f5f7fb;
+}
+
+.status{
+padding:6px 12px;
+border-radius:20px;
+color:white;
+font-size:12px;
+font-weight:bold;
+}
+
+.active{
+background:var(--green);
+}
+
+.testing{
+background:var(--orange);
+}
+
+#equity{
+height:300px;
+}
+
+.footer-stats{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:15px;
+margin-top:20px;
+}
+
+.stat{
+background:white;
+padding:20px;
+border-radius:15px;
+text-align:center;
+box-shadow:0 3px 15px rgba(0,0,0,.08);
+}
+
+.stat h2{
+color:var(--blue);
+margin-top:10px;
+}
+
+.stat p{
+color:#666;
+}
+
+@media(max-width:1200px){
+
+.cards{
+grid-template-columns:1fr;
+}
+
+.footer-stats{
+grid-template-columns:repeat(2,1fr);
+}
+
+}
+
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+
+<div class="logo">
+Invest<span>AI</span>
+</div>
+
+<div class="menu">
+<a href="#" class="active">Dashboard</a>
+<a href="#">Mercados</a>
+<a href="#">Señales</a>
+<a href="#">Modelos IA</a>
+<a href="#">Portafolio</a>
+<a href="#">Backtesting</a>
+<a href="#">Configuración</a>
+</div>
+
+</div>
+
+<div class="main">
+
+<div class="header">
+<h1>Dashboard Financiero IA</h1>
+<h3>Capital Total: $125,430.50</h3>
+</div>
+
+<div class="cards">
+
+<div class="card">
+<div class="card-title">
+Gráfico Candlestick - AAPL
+</div>
+<div id="candlestick"></div>
+</div>
+
+<div class="card">
+
+<div class="card-title">
+Señales IA en Tiempo Real
+</div>
+
+<div class="signals">
+
+<div class="signal">
+<div class="signal-left">
+<div class="dot buy"></div>
+<div>
+<h3 class="buy-text">BUY</h3>
+<p>DeepTrader v2.1</p>
+</div>
+</div>
+<div class="confidence">82%</div>
+</div>
+
+<div class="signal">
+<div class="signal-left">
+<div class="dot hold"></div>
+<div>
+<h3 class="hold-text">HOLD</h3>
+<p>NeuralNet Pro</p>
+</div>
+</div>
+<div class="confidence">54%</div>
+</div>
+
+<div class="signal">
+<div class="signal-left">
+<div class="dot sell"></div>
+<div>
+<h3 class="sell-text">SELL</h3>
+<p>Quantum AI</p>
+</div>
+</div>
+<div class="confidence">76%</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="card table-card">
+
+<div class="card-title">
+Rendimiento de Modelos IA
+</div>
+
+<table>
+
+<thead>
+<tr>
+<th>Modelo</th>
+<th>Activo</th>
+<th>Win Rate</th>
+<th>Profit Factor</th>
+<th>Retorno</th>
+<th>Estado</th>
+</tr>
+</thead>
+
+<tbody>
+
+<tr>
+<td>DeepTrader v2.1</td>
+<td>AAPL</td>
+<td>68.75%</td>
+<td>2.34</td>
+<td>+12.45%</td>
+<td><span class="status active">Activo</span></td>
+</tr>
+
+<tr>
+<td>NeuralNet Pro</td>
+<td>MSFT</td>
+<td>61.46%</td>
+<td>1.89</td>
+<td>+8.72%</td>
+<td><span class="status active">Activo</span></td>
+</tr>
+
+<tr>
+<td>Quantum AI</td>
+<td>NVDA</td>
+<td>57.33%</td>
+<td>1.45</td>
+<td>+5.31%</td>
+<td><span class="status active">Activo</span></td>
+</tr>
+
+<tr>
+<td>AlphaPredict</td>
+<td>TSLA</td>
+<td>53.97%</td>
+<td>1.22</td>
+<td>+2.18%</td>
+<td><span class="status testing">Testing</span></td>
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+
+<div class="card">
+
+<div class="card-title">
+Curva de Equity
+</div>
+
+<div id="equity"></div>
+
+</div>
+
+<div class="footer-stats">
+
+<div class="stat">
+<p>Sharpe Ratio</p>
+<h2>1.85</h2>
+</div>
+
+<div class="stat">
+<p>Sortino Ratio</p>
+<h2>2.43</h2>
+</div>
+
+<div class="stat">
+<p>Calmar Ratio</p>
+<h2>1.32</h2>
+</div>
+
+<div class="stat">
+<p>Win Rate Promedio</p>
+<h2>58.62%</h2>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+/* Candlestick */
+
+var trace = {
+x:[
+'2025-01-01','2025-01-02','2025-01-03',
+'2025-01-04','2025-01-05','2025-01-06',
+'2025-01-07','2025-01-08'
+],
+close:[175,182,180,188,192,195,190,198],
+high:[183,186,185,194,197,200,198,205],
+low:[170,176,175,182,188,190,185,192],
+open:[172,178,182,184,190,193,195,194],
+type:'candlestick'
+};
+
+Plotly.newPlot(
+'candlestick',
+[trace],
+{
+paper_bgcolor:'white',
+plot_bgcolor:'white',
+margin:{t:20},
+xaxis:{rangeslider:{visible:false}},
+font:{family:'Segoe UI'}
+},
+{responsive:true}
+);
+
+/* Equity Curve */
+
+var equity = {
+x:[
+1,2,3,4,5,6,7,8,9,10,
+11,12,13,14,15
+],
+y:[
+80000,84000,82000,89000,92000,
+96000,101000,99000,108000,112000,
+110000,117000,120000,118000,125430
+],
+mode:'lines',
+line:{
+color:'#C5961A',
+width:4
+}
+};
+
+Plotly.newPlot(
+'equity',
+[equity],
+{
+paper_bgcolor:'white',
+plot_bgcolor:'white',
+margin:{t:20},
+font:{family:'Segoe UI'}
+},
+{responsive:true}
+);
+
+</script>
+
+</body>
+</html>

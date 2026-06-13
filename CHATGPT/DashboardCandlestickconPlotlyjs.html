@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvestAI - Dashboard de Mercado</title>
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI',sans-serif;
+}
+
+body{
+    background:#0f172a;
+    color:white;
+}
+
+.header{
+    padding:15px 25px;
+    background:#111827;
+    border-bottom:1px solid #1f2937;
+}
+
+.header h1{
+    color:#38bdf8;
+}
+
+.container{
+    display:flex;
+    height:calc(100vh - 75px);
+}
+
+.main{
+    flex:1;
+    padding:20px;
+}
+
+.sidebar{
+    width:300px;
+    background:#111827;
+    border-left:1px solid #1f2937;
+    padding:20px;
+}
+
+.tabs{
+    display:flex;
+    gap:10px;
+    margin-bottom:15px;
+}
+
+.tab{
+    padding:10px 20px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:#1e293b;
+    color:white;
+}
+
+.tab.active{
+    background:#2563eb;
+}
+
+.controls{
+    display:flex;
+    gap:15px;
+    margin-bottom:15px;
+    flex-wrap:wrap;
+}
+
+select{
+    padding:10px;
+    border-radius:8px;
+    border:none;
+    background:#1e293b;
+    color:white;
+}
+
+.card{
+    background:#1e293b;
+    padding:15px;
+    margin-bottom:15px;
+    border-radius:12px;
+}
+
+.card h3{
+    color:#94a3b8;
+    margin-bottom:8px;
+}
+
+.card p{
+    font-size:1.4rem;
+    font-weight:bold;
+}
+
+.positive{
+    color:#26A69A;
+}
+
+.negative{
+    color:#EF5350;
+}
+
+#chart{
+    height:750px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <h1>📈 InvestAI - Dashboard Principal</h1>
+</div>
+
+<div class="container">
+
+    <div class="main">
+
+        <div class="tabs">
+            <button class="tab active">Acciones</button>
+            <button class="tab">Criptomonedas</button>
+        </div>
+
+        <div class="controls">
+            <select id="tickerSelect">
+                <option>AAPL</option>
+                <option>MSFT</option>
+                <option>GOOGL</option>
+                <option>TSLA</option>
+                <option>BTC-USD</option>
+            </select>
+
+            <select id="periodSelect">
+                <option value="30">1M</option>
+                <option value="90" selected>3M</option>
+                <option value="180">6M</option>
+                <option value="365">1A</option>
+            </select>
+        </div>
+
+        <div id="chart"></div>
+
+    </div>
+
+    <div class="sidebar">
+
+        <div class="card">
+            <h3>Precio Actual</h3>
+            <p id="price">$0.00</p>
+        </div>
+
+        <div class="card">
+            <h3>Variación</h3>
+            <p id="change">0%</p>
+        </div>
+
+        <div class="card">
+            <h3>Volumen</h3>
+            <p id="volume">0</p>
+        </div>
+
+        <div class="card">
+            <h3>Market Cap</h3>
+            <p id="marketCap">$0B</p>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+// ============================
+// DATOS SIMULADOS
+// ============================
+
+function generateData(days){
+
+    let dates = [];
+    let open = [];
+    let high = [];
+    let low = [];
+    let close = [];
+    let volume = [];
+
+    let price = 180 + Math.random()*20;
+
+    for(let i=days; i>=0; i--){
+
+        let date = new Date();
+        date.setDate(date.getDate()-i);
+
+        let o = price;
+
+        let c = o + (Math.random()-0.5)*8;
+
+        let h = Math.max(o,c) + Math.random()*4;
+
+        let l = Math.min(o,c) - Math.random()*4;
+
+        let v = Math.floor(
+            5000000 +
+            Math.random()*25000000
+        );
+
+        dates.push(date);
+
+        open.push(o);
+        high.push(h);
+        low.push(l);
+        close.push(c);
+        volume.push(v);
+
+        price = c;
+    }
+
+    return {
+        dates,
+        open,
+        high,
+        low,
+        close,
+        volume
+    };
+}
+
+// ============================
+// INDICADORES
+// ============================
+
+function SMA(data, period){
+
+    let result=[];
+
+    for(let i=0;i<data.length;i++){
+
+        if(i<period-1){
+            result.push(null);
+            continue;
+        }
+
+        let sum=0;
+
+        for(let j=0;j<period;j++){
+            sum+=data[i-j];
+        }
+
+        result.push(sum/period);
+    }
+
+    return result;
+}
+
+function EMA(data, period){
+
+    let result=[];
+
+    let multiplier=2/(period+1);
+
+    result[0]=data[0];
+
+    for(let i=1;i<data.length;i++){
+
+        result[i]=(
+            (data[i]-result[i-1])*
+            multiplier
+        )+result[i-1];
+    }
+
+    return result;
+}
+
+// ============================
+// PANEL LATERAL
+// ============================
+
+function updateSidebar(data,ticker){
+
+    let lastPrice =
+        data.close[data.close.length-1];
+
+    let prevPrice =
+        data.close[data.close.length-2];
+
+    let change =
+        ((lastPrice-prevPrice)/prevPrice)*100;
+
+    let marketCaps={
+        "AAPL":"3.4T",
+        "MSFT":"3.2T",
+        "GOOGL":"2.1T",
+        "TSLA":"0.9T",
+        "BTC-USD":"2.0T"
+    };
+
+    document.getElementById("price").innerHTML=
+        "$"+lastPrice.toFixed(2);
+
+    let changeElement=
+        document.getElementById("change");
+
+    changeElement.innerHTML=
+        change.toFixed(2)+"%";
+
+    changeElement.className=
+        change>=0 ? "positive":"negative";
+
+    document.getElementById("volume").innerHTML=
+        data.volume[data.volume.length-1]
+        .toLocaleString();
+
+    document.getElementById("marketCap").innerHTML=
+        "$"+marketCaps[ticker];
+}
+
+// ============================
+// GRÁFICO
+// ============================
+
+function drawChart(){
+
+    const ticker=
+        document.getElementById("tickerSelect").value;
+
+    const days=
+        parseInt(
+            document.getElementById("periodSelect").value
+        );
+
+    const data=
+        generateData(days);
+
+    const sma20=
+        SMA(data.close,20);
+
+    const sma50=
+        SMA(data.close,50);
+
+    const ema12=
+        EMA(data.close,12);
+
+    const colors=
+        data.close.map((c,i)=>
+            c>=data.open[i]
+            ? "#26A69A"
+            : "#EF5350"
+        );
+
+    const candle={
+        x:data.dates,
+        open:data.open,
+        high:data.high,
+        low:data.low,
+        close:data.close,
+        type:"candlestick",
+        name:ticker,
+
+        increasing:{
+            line:{color:"#26A69A"}
+        },
+
+        decreasing:{
+            line:{color:"#EF5350"}
+        },
+
+        xaxis:"x",
+        yaxis:"y"
+    };
+
+    const sma20Trace={
+        x:data.dates,
+        y:sma20,
+        type:"scatter",
+        mode:"lines",
+        name:"SMA20"
+    };
+
+    const sma50Trace={
+        x:data.dates,
+        y:sma50,
+        type:"scatter",
+        mode:"lines",
+        name:"SMA50"
+    };
+
+    const ema12Trace={
+        x:data.dates,
+        y:ema12,
+        type:"scatter",
+        mode:"lines",
+        name:"EMA12"
+    };
+
+    const volumeTrace={
+        x:data.dates,
+        y:data.volume,
+        type:"bar",
+        name:"Volumen",
+        marker:{
+            color:colors
+        },
+        xaxis:"x2",
+        yaxis:"y2"
+    };
+
+    const layout={
+
+        paper_bgcolor:"#0f172a",
+        plot_bgcolor:"#0f172a",
+
+        font:{
+            color:"white"
+        },
+
+        title:
+            ticker+
+            " - OHLCV con Indicadores Técnicos",
+
+        showlegend:true,
+
+        xaxis:{
+            rangeslider:{
+                visible:true
+            },
+            domain:[0,1],
+            anchor:"y"
+        },
+
+        yaxis:{
+            domain:[0.32,1],
+            title:"Precio"
+        },
+
+        xaxis2:{
+            domain:[0,1],
+            anchor:"y2"
+        },
+
+        yaxis2:{
+            domain:[0,0.25],
+            title:"Volumen"
+        },
+
+        margin:{
+            t:50,
+            l:60,
+            r:30,
+            b:40
+        }
+    };
+
+    Plotly.newPlot(
+        "chart",
+        [
+            candle,
+            sma20Trace,
+            sma50Trace,
+            ema12Trace,
+            volumeTrace
+        ],
+        layout,
+        {
+            responsive:true
+        }
+    );
+
+    updateSidebar(data,ticker);
+}
+
+// ============================
+// EVENTOS
+// ============================
+
+document
+.getElementById("tickerSelect")
+.addEventListener("change",drawChart);
+
+document
+.getElementById("periodSelect")
+.addEventListener("change",drawChart);
+
+// Carga inicial
+drawChart();
+
+</script>
+
+</body>
+</html>
