@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Predicción Bursátil Inteligente</title>
+    <!-- Plotly.js CDN -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            --bullish: #26A69A;
+            --bearish: #EF5350;
+            --bg-white: #ffffff;
+            --border-color: #e0e0e0;
+            --text-dark: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: #f5f5f5;
+            color: var(--text-dark);
+        }
+
+        /* Layout de 12 columnas */
+        .container {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 15px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            grid-column: span 12;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .controls {
+            grid-column: span 12;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .tabs-container {
+            grid-column: span 12;
+            display: flex;
+            gap: 10px;
+            margin-bottom: -5px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #e0e0e0;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .tab.active {
+            background: white;
+            color: var(--bullish);
+        }
+
+        main {
+            grid-column: span 9;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            min-height: 600px;
+        }
+
+        aside {
+            grid-column: span 3;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        select, button {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: white;
+            cursor: pointer;
+        }
+
+        .stat-card {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        .stat-change {
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .positive { color: var(--bullish); }
+        .negative { color: var(--bearish); }
+
+        #chart-container {
+            width: 100%;
+            height: 550px;
+        }
+
+        @media (max-width: 1024px) {
+            main { grid-column: span 12; }
+            aside { grid-column: span 12; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1 style="margin:0; font-size: 1.5rem;">Dashboard Bursátil Inteligente</h1>
+        <div id="last-update" style="font-size: 0.9rem; color: #888;">Última actualización: --:--:--</div>
+    </header>
+
+    <div class="tabs-container">
+        <div class="tab active" onclick="switchCategory('Acciones')">Acciones</div>
+        <div class="tab" onclick="switchCategory('Criptomonedas')">Criptomonedas</div>
+    </div>
+
+    <div class="controls">
+        <div>
+            <label>Ticker:</label>
+            <select id="ticker-select" onchange="updateDashboard()">
+                <!-- Opciones dinámicas -->
+            </select>
+        </div>
+        <div>
+            <label>Período:</label>
+            <select id="period-select" onchange="updateDashboard()">
+                <option value="1M">1 Mes</option>
+                <option value="3M" selected>3 Meses</option>
+                <option value="6M">6 Meses</option>
+                <option value="1A">1 Año</option>
+                <option value="2A">2 Años</option>
+                <option value="5A">5 Años</option>
+            </select>
+        </div>
+    </div>
+
+    <main>
+        <div id="chart-container"></div>
+    </main>
+
+    <aside>
+        <h3 style="margin-top:0">Datos en Tiempo Real</h3>
+        <div class="stat-card">
+            <div class="stat-label">Precio Actual</div>
+            <div id="rt-price" class="stat-value">--</div>
+            <div id="rt-change" class="stat-change">--</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Volumen (24h)</div>
+            <div id="rt-volume" class="stat-value">--</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Market Cap</div>
+            <div id="rt-mcap" class="stat-value">--</div>
+        </div>
+        <div style="font-size: 0.8rem; color: #999; font-style: italic;">
+            * Datos simulados para fines de demostración.
+        </div>
+    </aside>
+</div>
+
+<script>
+    // Configuración inicial
+    const tickers = {
+        'Acciones': ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'NVDA'],
+        'Criptomonedas': ['BTC-USD', 'ETH-USD']
+    };
+    
+    let currentCategory = 'Acciones';
+    let currentData = [];
+
+    // Función para simular datos OHLCV
+    function generateSimulatedData(ticker, days) {
+        const data = [];
+        let date = new Date();
+        date.setDate(date.getDate() - days);
+        
+        let lastClose = ticker.includes('BTC') ? 65000 : ticker.includes('ETH') ? 3500 : 200;
+        const volatility = ticker.includes('TSLA') || ticker.includes('USD') ? 0.04 : 0.02;
+
+        for (let i = 0; i < days; i++) {
+            const open = lastClose * (1 + (Math.random() - 0.5) * volatility);
+            const high = open * (1 + Math.random() * volatility);
+            const low = open * (1 - Math.random() * volatility);
+            const close = (high + low + open) / 3 * (1 + (Math.random() - 0.5) * volatility);
+            const volume = Math.floor(Math.random() * 1000000) + 500000;
+
+            data.push({
+                date: new Date(date),
+                open: open,
+                high: high,
+                low: low,
+                close: close,
+                volume: volume
+            });
+
+            lastClose = close;
+            date.setDate(date.getDate() + 1);
+        }
+        return data;
+    }
+
+    // Cálculos de Indicadores Técnicos
+    function calculateSMA(data, period) {
+        return data.map((val, index) => {
+            if (index < period - 1) return null;
+            const slice = data.slice(index - period + 1, index + 1);
+            const sum = slice.reduce((a, b) => a + b.close, 0);
+            return sum / period;
+        });
+    }
+
+    function calculateEMA(data, period) {
+        const k = 2 / (period + 1);
+        let ema = [data[0].close];
+        for (let i = 1; i < data.length; i++) {
+            ema.push(data[i].close * k + ema[i - 1] * (1 - k));
+        }
+        return ema;
+    }
+
+    // Renderizado del Gráfico
+    function renderChart(ticker, ohlcv) {
+        const dates = ohlcv.map(d => d.date);
+        const open = ohlcv.map(d => d.open);
+        const high = ohlcv.map(d => d.high);
+        const low = ohlcv.map(d => d.low);
+        const close = ohlcv.map(d => d.close);
+        const volume = ohlcv.map(d => d.volume);
+
+        // Colores de volumen
+        const volumeColors = ohlcv.map((d, i) => {
+            if (i === 0) return '#26A69A';
+            return d.close >= ohlcv[i-1].close ? '#26A69A' : '#EF5350';
+        });
+
+        // Trazado de Velas
+        const traceCandle = {
+            x: dates,
+            open: open,
+            high: high,
+            low: low,
+            close: close,
+            type: 'candlestick',
+            name: ticker,
+            increasing: { line: { color: '#26A69A' } },
+            decreasing: { line: { color: '#EF5350' } },
+            xaxis: 'x',
+            yaxis: 'y'
+        };
+
+        // Trazado de Volumen
+        const traceVolume = {
+            x: dates,
+            y: volume,
+            type: 'bar',
+            name: 'Volumen',
+            marker: { color: volumeColors },
+            xaxis: 'x',
+            yaxis: 'y2'
+        };
+
+        // Indicadores
+        const sma20 = calculateSMA(ohlcv, 20);
+        const sma50 = calculateSMA(ohlcv, 50);
+        const ema12 = calculateEMA(ohlcv, 12);
+
+        const traceSMA20 = {
+            x: dates, y: sma20, type: 'scatter', mode: 'lines',
+            name: 'SMA 20', line: { color: '#2196F3', width: 1.5 }
+        };
+        const traceSMA50 = {
+            x: dates, y: sma50, type: 'scatter', mode: 'lines',
+            name: 'SMA 50', line: { color: '#FF9800', width: 1.5 }
+        };
+        const traceEMA12 = {
+            x: dates, y: ema12, type: 'scatter', mode: 'lines',
+            name: 'EMA 12', line: { color: '#9C27B0', width: 1.5 }
+        };
+
+        const layout = {
+            dragmode: 'zoom',
+            showlegend: true,
+            legend: { orientation: 'h', y: 1.1 },
+            margin: { t: 30, l: 50, r: 50, b: 50 },
+            xaxis: {
+                autorange: true,
+                rangeslider: { visible: true },
+                type: 'date',
+                domain: [0, 1]
+            },
+            yaxis: {
+                autorange: true,
+                domain: [0.3, 1],
+                title: 'Precio'
+            },
+            yaxis2: {
+                autorange: true,
+                domain: [0, 0.25],
+                title: 'Volumen',
+                side: 'right'
+            },
+            plot_bgcolor: 'white',
+            paper_bgcolor: 'white'
+        };
+
+        Plotly.newPlot('chart-container', [traceCandle, traceSMA20, traceSMA50, traceEMA12, traceVolume], layout, { responsive: true });
+    }
+
+    // Actualización de Sidebar
+    function updateSidebar(ohlcv) {
+        const last = ohlcv[ohlcv.length - 1];
+        const prev = ohlcv[ohlcv.length - 2];
+        const diff = last.close - prev.close;
+        const pct = (diff / prev.close) * 100;
+
+        document.getElementById('rt-price').innerText = `$${last.close.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        const changeEl = document.getElementById('rt-change');
+        changeEl.innerText = `${diff > 0 ? '+' : ''}${diff.toFixed(2)} (${pct.toFixed(2)}%)`;
+        changeEl.className = `stat-change ${diff >= 0 ? 'positive' : 'negative'}`;
+
+        document.getElementById('rt-volume').innerText = last.volume.toLocaleString();
+        document.getElementById('rt-mcap').innerText = `$${(last.volume * last.close * 100).toLocaleString()}`;
+        
+        document.getElementById('last-update').innerText = `Última actualización: ${new Date().toLocaleTimeString()}`;
+    }
+
+    // Lógica de navegación y selectores
+    function switchCategory(cat) {
+        currentCategory = cat;
+        document.querySelectorAll('.tab').forEach(t => {
+            t.classList.remove('active');
+            if (t.innerText === cat) t.classList.add('active');
+        });
+        
+        const select = document.getElementById('ticker-select');
+        select.innerHTML = '';
+        tickers[cat].forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t;
+            opt.innerText = t;
+            select.appendChild(opt);
+        });
+        
+        updateDashboard();
+    }
+
+    function updateDashboard() {
+        const ticker = document.getElementById('ticker-select').value;
+        const period = document.getElementById('period-select').value;
+        
+        let days = 90; // Default
+        if (period === '1M') days = 30;
+        if (period === '3M') days = 90;
+        if (period === '6M') days = 180;
+        if (period === '1A') days = 365;
+        if (period === '2A') days = 730;
+        if (period === '5A') days = 1825;
+
+        const data = generateSimulatedData(ticker, days);
+        renderChart(ticker, data);
+        updateSidebar(data);
+    }
+
+    // Inicialización
+    window.onload = () => {
+        switchCategory('Acciones');
+    };
+</script>
+
+</body>
+</html>

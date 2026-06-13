@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Predicción Bursátil Inteligente</title>
+    <!-- Carga de React, ReactDOM y Babel para JSX desde CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Carga de Plotly.js desde CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js" charset="utf-8"></script>
+    <style>
+        /* Estilos Base */
+        :root {
+            --primary-color: #26A69A; /* Alcista */
+            --secondary-color: #EF5350; /* Bajista */
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --sidebar-bg: #f8f9fa;
+            --header-bg: #ffffff;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+        }
+
+        /* Cuadrícula de 12 columnas */
+        .container {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            height: 100vh;
+        }
+
+        /* Cabecera */
+        .header {
+            grid-column: span 12;
+            height: 60px;
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        /* Área Principal */
+        .main-content {
+            grid-column: span 9;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        /* Panel Lateral */
+        .sidebar {
+            grid-column: span 3;
+            background-color: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Controles */
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-bottom-color: var(--primary-color);
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: white;
+            font-size: 0.9rem;
+        }
+
+        /* Gráfico */
+        #chart-container {
+            flex-grow: 1;
+            min-height: 500px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        /* Datos Sidebar */
+        .data-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .data-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .data-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        .variation-positive { color: var(--primary-color); }
+        .variation-negative { color: var(--secondary-color); }
+
+        /* Responsividad básica */
+        @media (max-width: 1024px) {
+            .main-content { grid-column: span 8; }
+            .sidebar { grid-column: span 4; }
+        }
+
+        @media (max-width: 768px) {
+            .container { display: block; height: auto; }
+            .main-content, .sidebar { width: 100%; }
+            #chart-container { min-height: 400px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- UTILIDADES DE DATOS SIMULADOS ---
+
+        const generateData = (ticker, days = 90) => {
+            const data = [];
+            let currentPrice = ticker.includes('USD') ? (ticker.startsWith('BTC') ? 65000 : 3500) : 150;
+            let currentVol = 1000000;
+            const now = new Date();
+
+            for (let i = days; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                
+                // Ignorar fines de semana para acciones (simplificado)
+                if (!ticker.includes('USD') && (date.getDay() === 0 || date.getDay() === 6)) continue;
+
+                const volatility = ticker.includes('USD') ? 0.04 : 0.02;
+                const change = currentPrice * volatility * (Math.random() - 0.5);
+                const open = currentPrice;
+                const close = open + change;
+                const high = Math.max(open, close) + (Math.random() * volatility * currentPrice * 0.5);
+                const low = Math.min(open, close) - (Math.random() * volatility * currentPrice * 0.5);
+                const volume = currentVol * (0.5 + Math.random());
+
+                data.push({
+                    date: date.toISOString().split('T')[0],
+                    open: parseFloat(open.toFixed(2)),
+                    high: parseFloat(high.toFixed(2)),
+                    low: parseFloat(low.toFixed(2)),
+                    close: parseFloat(close.toFixed(2)),
+                    volume: Math.floor(volume)
+                });
+                currentPrice = close;
+            }
+            return data;
+        };
+
+        // Cálculos de Indicadores Técnicos
+        const calculateSMA = (data, period) => {
+            return data.map((_, idx, arr) => {
+                if (idx < period - 1) return null;
+                const slice = arr.slice(idx - period + 1, idx + 1);
+                const sum = slice.reduce((acc, val) => acc + val.close, 0);
+                return sum / period;
+            });
+        };
+
+        const calculateEMA = (data, period) => {
+            const k = 2 / (period + 1);
+            let ema = [];
+            let prevEma = data[0].close;
+            
+            for (let i = 0; i < data.length; i++) {
+                if (i === 0) {
+                    ema.push(prevEma);
+                } else {
+                    const currentEma = data[i].close * k + prevEma * (1 - k);
+                    ema.push(currentEma);
+                    prevEma = currentEma;
+                }
+            }
+            return ema;
+        };
+
+        // --- COMPONENTES ---
+
+        const Dashboard = () => {
+            const [activeTab, setActiveTab] = useState('Acciones');
+            const [ticker, setTicker] = useState('AAPL');
+            const [period, setPeriod] = useState('3M');
+            const [marketData, setMarketData] = useState([]);
+
+            const tickers = {
+                'Acciones': ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'NVDA'],
+                'Criptomonedas': ['BTC-USD', 'ETH-USD']
+            };
+
+            const periods = {
+                '1M': 30, '3M': 90, '6M': 180, '1A': 365, '2A': 730, '5A': 1825
+            };
+
+            useEffect(() => {
+                // Simular carga de datos
+                const days = periods[period];
+                const data = generateData(ticker, days);
+                setMarketData(data);
+            }, [ticker, period]);
+
+            const currentPrice = marketData.length > 0 ? marketData[marketData.length - 1].close : 0;
+            const prevPrice = marketData.length > 1 ? marketData[marketData.length - 2].close : currentPrice;
+            const variation = ((currentPrice - prevPrice) / prevPrice * 100).toFixed(2);
+            const volume = marketData.length > 0 ? marketData[marketData.length - 1].volume : 0;
+
+            return (
+                <div className="container">
+                    <header className="header">
+                        <h1>SmartTrade AI Dashboard</h1>
+                        <div className="user-info">Analista: Trader Pro</div>
+                    </header>
+
+                    <main className="main-content">
+                        <div className="tabs">
+                            {['Acciones', 'Criptomonedas'].map(tab => (
+                                <div 
+                                    key={tab}
+                                    className={`tab ${activeTab === tab ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveTab(tab);
+                                        setTicker(tickers[tab][0]);
+                                    }}
+                                >
+                                    {tab}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="controls">
+                            <select value={ticker} onChange={(e) => setTicker(e.target.value)}>
+                                {tickers[activeTab].map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <select value={period} onChange={(e) => setPeriod(e.target.value)}>
+                                {Object.keys(periods).map(p => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                        </div>
+
+                        <div id="chart-container">
+                            <Chart data={marketData} ticker={ticker} />
+                        </div>
+                    </main>
+
+                    <aside className="sidebar">
+                        <h3>Datos en Tiempo Real</h3>
+                        
+                        <div className="data-card">
+                            <div className="data-label">Precio Actual ({ticker})</div>
+                            <div className="data-value">${currentPrice.toLocaleString()}</div>
+                        </div>
+
+                        <div className="data-card">
+                            <div className="data-label">Variación 24h</div>
+                            <div className={`data-value ${variation >= 0 ? 'variation-positive' : 'variation-negative'}`}>
+                                {variation >= 0 ? '+' : ''}{variation}%
+                            </div>
+                        </div>
+
+                        <div className="data-card">
+                            <div className="data-label">Volumen (24h)</div>
+                            <div className="data-value">{volume.toLocaleString()}</div>
+                        </div>
+
+                        <div className="data-card">
+                            <div className="data-label">Market Cap</div>
+                            <div className="data-value">
+                                ${(currentPrice * (ticker.includes('USD') ? 19000000 : 15000000000) / 1e9).toFixed(2)}B
+                            </div>
+                        </div>
+
+                        <div style={{marginTop: 'auto', fontSize: '0.8rem', color: '#888'}}>
+                            * Datos simulados para propósitos de demostración.
+                        </div>
+                    </aside>
+                </div>
+            );
+        };
+
+        const Chart = ({ data, ticker }) => {
+            useEffect(() => {
+                if (data.length === 0) return;
+
+                const dates = data.map(d => d.date);
+                const sma20 = calculateSMA(data, 20);
+                const sma50 = calculateSMA(data, 50);
+                const ema12 = calculateEMA(data, 12);
+
+                const candlestick = {
+                    x: dates,
+                    open: data.map(d => d.open),
+                    high: data.map(d => d.high),
+                    low: data.map(d => d.low),
+                    close: data.map(d => d.close),
+                    type: 'candlestick',
+                    name: ticker,
+                    increasing: { line: { color: '#26A69A' } },
+                    decreasing: { line: { color: '#EF5350' } },
+                    yaxis: 'y2'
+                };
+
+                const volume = {
+                    x: dates,
+                    y: data.map(d => d.volume),
+                    type: 'bar',
+                    name: 'Volumen',
+                    marker: {
+                        color: data.map(d => d.close >= d.open ? '#26A69A' : '#EF5350'),
+                        opacity: 0.5
+                    },
+                    yaxis: 'y'
+                };
+
+                const traceSMA20 = {
+                    x: dates, y: sma20, type: 'scatter', mode: 'lines',
+                    name: 'SMA 20', line: { color: '#2196F3', width: 1.5 }, yaxis: 'y2'
+                };
+
+                const traceSMA50 = {
+                    x: dates, y: sma50, type: 'scatter', mode: 'lines',
+                    name: 'SMA 50', line: { color: '#FF9800', width: 1.5 }, yaxis: 'y2'
+                };
+
+                const traceEMA12 = {
+                    x: dates, y: ema12, type: 'scatter', mode: 'lines',
+                    name: 'EMA 12', line: { color: '#9C27B0', width: 1.5 }, yaxis: 'y2'
+                };
+
+                const layout = {
+                    dragmode: 'zoom',
+                    showlegend: true,
+                    legend: { orientation: 'h', y: 1.1 },
+                    margin: { r: 50, t: 30, b: 50, l: 50 },
+                    xaxis: { 
+                        autorange: true, 
+                        rangeslider: { visible: false },
+                        type: 'date',
+                        gridcolor: '#f0f0f0'
+                    },
+                    yaxis: { 
+                        domain: [0, 0.2], 
+                        showticklabels: false,
+                        gridcolor: '#f0f0f0'
+                    },
+                    yaxis2: { 
+                        domain: [0.2, 1], 
+                        title: 'Precio',
+                        gridcolor: '#f0f0f0'
+                    },
+                    plot_bgcolor: 'white',
+                    paper_bgcolor: 'white'
+                };
+
+                Plotly.newPlot('chart-container', [candlestick, volume, traceSMA20, traceSMA50, traceEMA12], layout, { responsive: true });
+
+            }, [data, ticker]);
+
+            return null;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>
