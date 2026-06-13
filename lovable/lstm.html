@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pronóstico LSTM - Predicción de Precios</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a202c; }
+  header { background: #fff; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; padding: 16px 24px; }
+  .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .col-9 { grid-column: span 9; } .col-3 { grid-column: span 3; } .col-12 { grid-column: span 12; }
+  h3 { margin-bottom: 12px; font-size: 15px; }
+  .param { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #edf2f7; font-size: 13px; }
+  .param span:last-child { font-weight: 600; color: #42A5F5; }
+  .metric { padding: 10px; background: #f7fafc; border-radius: 6px; margin-bottom: 8px; }
+  .metric-label { font-size: 11px; color: #718096; text-transform: uppercase; }
+  .metric-value { font-size: 18px; font-weight: 600; margin-top: 2px; }
+  .slider-box { padding: 12px 24px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 16px; }
+  input[type=range] { flex: 1; max-width: 400px; }
+  @media (max-width: 900px) { .col-9, .col-3 { grid-column: span 12; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧠 LSTM Regressor — Pronóstico de Precios AAPL</h1>
+  <a href="/" style="color:#26A69A;text-decoration:none;font-size:14px;">← Inicio</a>
+</header>
+
+<div class="slider-box">
+  <label>Días de predicción: <strong id="diasLabel">30</strong></label>
+  <input type="range" id="diasSlider" min="0" max="3" step="1" value="2" />
+  <span style="color:#718096;font-size:12px;">(7 / 14 / 30 / 60 días)</span>
+</div>
+
+<div class="grid">
+  <div class="card col-9">
+    <h3>Precio real vs. Predicción LSTM vs. ARIMA-LSTM</h3>
+    <div id="grafico" style="width:100%;height:500px;"></div>
+  </div>
+
+  <div class="card col-3">
+    <h3>Parámetros del modelo</h3>
+    <div class="param"><span>Épocas</span><span>50</span></div>
+    <div class="param"><span>Dropout</span><span>0.2</span></div>
+    <div class="param"><span>Batch size</span><span>32</span></div>
+    <div class="param"><span>Ventana</span><span>60 días</span></div>
+    <div class="param"><span>Learning rate</span><span>0.001</span></div>
+    <div class="param"><span>Arquitectura</span><span>LSTM(64→32)</span></div>
+
+    <h3 style="margin-top:20px;">Métricas</h3>
+    <div class="metric"><div class="metric-label">RMSE (USD)</div><div class="metric-value" id="rmse">3.24</div></div>
+    <div class="metric"><div class="metric-label">RMSE (%)</div><div class="metric-value" id="rmsep">1.82%</div></div>
+    <div class="metric"><div class="metric-label">MAE</div><div class="metric-value" id="mae">2.56</div></div>
+    <div class="metric"><div class="metric-label">R²</div><div class="metric-value" id="r2">0.946</div></div>
+  </div>
+</div>
+
+<script>
+const opcionesDias = [7, 14, 30, 60];
+
+// Generar histórico realista con tendencia alcista
+function generarHistorico(dias) {
+  const datos = []; let precio = 150;
+  const hoy = new Date();
+  for (let i = dias; i >= 0; i--) {
+    const fecha = new Date(hoy); fecha.setDate(fecha.getDate() - i);
+    precio = Math.max(1, precio + (Math.random() - 0.42) * 2.5);
+    datos.push({ fecha, precio });
+  }
+  return datos;
+}
+
+function renderizar() {
+  const diasPred = opcionesDias[parseInt(document.getElementById('diasSlider').value)];
+  document.getElementById('diasLabel').textContent = diasPred;
+
+  const historico = generarHistorico(120);
+  const fechasH = historico.map(d => d.fecha.toISOString().split('T')[0]);
+  const preciosH = historico.map(d => d.precio);
+  const ultimoPrecio = preciosH[preciosH.length - 1];
+
+  // Predicciones LSTM y ARIMA-LSTM
+  const fechasP = []; const lstmPred = []; const arimaPred = []; const bandSup = []; const bandInf = [];
+  let pLSTM = ultimoPrecio, pARIMA = ultimoPrecio;
+  const ultDate = historico[historico.length - 1].fecha;
+  for (let i = 1; i <= diasPred; i++) {
+    const f = new Date(ultDate); f.setDate(f.getDate() + i);
+    fechasP.push(f.toISOString().split('T')[0]);
+    pLSTM += (Math.random() - 0.35) * 2;
+    pARIMA += (Math.random() - 0.38) * 2.2;
+    lstmPred.push(pLSTM);
+    arimaPred.push(pARIMA);
+    const confianza = i * 0.4;
+    bandSup.push(pLSTM + confianza);
+    bandInf.push(pLSTM - confianza);
+  }
+
+  const trazoReal = { x: fechasH, y: preciosH, mode: 'lines', name: 'Precio real', line: { color: '#1976D2', width: 2 } };
+  const trazoLSTM = { x: fechasP, y: lstmPred, mode: 'lines', name: 'LSTM', line: { color: '#EF5350', width: 2, dash: 'dash' } };
+  const trazoARIMA = { x: fechasP, y: arimaPred, mode: 'lines', name: 'ARIMA-LSTM', line: { color: '#26A69A', width: 2, dash: 'dash' } };
+  const banda = {
+    x: [...fechasP, ...fechasP.slice().reverse()],
+    y: [...bandSup, ...bandInf.slice().reverse()],
+    fill: 'toself', fillcolor: 'rgba(239, 83, 80, 0.15)',
+    line: { color: 'transparent' }, name: 'Banda de confianza', showlegend: true
+  };
+
+  Plotly.newPlot('grafico', [banda, trazoReal, trazoLSTM, trazoARIMA], {
+    margin: { t: 20, b: 40, l: 60, r: 20 },
+    plot_bgcolor: '#fff', paper_bgcolor: '#fff',
+    xaxis: { title: 'Fecha' }, yaxis: { title: 'Precio (USD)' },
+    legend: { orientation: 'h', y: 1.1 },
+    shapes: [{ type: 'line', x0: fechasH[fechasH.length - 1], x1: fechasH[fechasH.length - 1], y0: 0, y1: 1, yref: 'paper', line: { color: '#9E9E9E', dash: 'dot' } }],
+    annotations: [{ x: fechasH[fechasH.length - 1], y: 1, yref: 'paper', text: 'Hoy', showarrow: false, yanchor: 'bottom' }]
+  }, { responsive: true });
+
+  // Métricas se ajustan según horizonte
+  const factor = diasPred / 30;
+  document.getElementById('rmse').textContent = (3.24 * factor).toFixed(2);
+  document.getElementById('rmsep').textContent = (1.82 * factor).toFixed(2) + '%';
+  document.getElementById('mae').textContent = (2.56 * factor).toFixed(2);
+  document.getElementById('r2').textContent = Math.max(0.85, 0.946 - factor * 0.02).toFixed(3);
+}
+
+document.getElementById('diasSlider').addEventListener('input', renderizar);
+renderizar();
+</script>
+</body>
+</html>
