@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Autenticación - Plataforma de Inversión</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+    .container { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    h2 { text-align: center; }
+    input, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 4px; border: 1px solid #ccc; }
+    button { background: #007bff; color: #fff; border: none; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    .error { color: red; font-size: 0.9em; display: none; }
+    .social-login button { margin: 5px 0; }
+    .google { background: #db4437; }
+    .github { background: #333; }
+    .links { text-align: center; margin-top: 10px; }
+    .links a { margin: 0 5px; text-decoration: none; color: #007bff; }
+    .strength { height: 6px; border-radius: 3px; margin-top: -5px; }
+    .weak { background: red; }
+    .medium { background: orange; }
+    .strong { background: green; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<div class="container" id="login">
+  <h2>Iniciar Sesión</h2>
+  <input type="email" id="loginEmail" placeholder="Correo electrónico" required>
+  <div class="error" id="loginEmailError">Correo inválido</div>
+  <input type="password" id="loginPassword" placeholder="Contraseña" required>
+  <div class="error" id="loginPasswordError">Contraseña requerida</div>
+  <label><input type="checkbox"> Recordarme</label>
+  <button onclick="goTo('2fa')">Ingresar</button>
+  <div class="social-login">
+    <button class="google">Iniciar con Google</button>
+    <button class="github">Iniciar con GitHub</button>
+  </div>
+  <div class="links">
+    <a href="#" onclick="goTo('registro')">Registrarse</a> |
+    <a href="#" onclick="goTo('recuperar')">¿Olvidaste tu contraseña?</a>
+  </div>
+</div>
+
+<div class="container hidden" id="registro">
+  <h2>Registro de Usuario</h2>
+  <input type="text" id="regName" placeholder="Nombre completo" required>
+  <div class="error" id="regNameError">Campo obligatorio</div>
+  <input type="email" id="regEmail" placeholder="Correo electrónico" required>
+  <div class="error" id="regEmailError">Correo inválido</div>
+  <input type="password" id="regPassword" placeholder="Contraseña" required oninput="checkStrength(this.value)">
+  <div class="strength" id="strengthBar"></div>
+  <input type="password" id="regConfirm" placeholder="Confirmar contraseña" required>
+  <div class="error" id="regConfirmError">Las contraseñas no coinciden</div>
+  <button onclick="goTo('2fa')">Crear cuenta</button>
+</div>
+
+<div class="container hidden" id="recuperar">
+  <h2>Recuperar Contraseña</h2>
+  <input type="email" id="recEmail" placeholder="Correo electrónico" required>
+  <div class="error" id="recEmailError">Correo inválido</div>
+  <button onclick="alert('Se enviaron instrucciones a tu correo')">Enviar instrucciones</button>
+</div>
+
+<div class="container hidden" id="2fa">
+  <h2>Verificación de Dos Factores</h2>
+  <input type="text" maxlength="6" placeholder="Código de 6 dígitos" required>
+  <button onclick="goTo('bienvenida')">Verificar</button>
+  <p>Reenviar código en <span id="timer">30</span> segundos</p>
+</div>
+
+<div class="container hidden" id="bienvenida">
+  <h2>Bienvenido, Usuario</h2>
+  <p>Correo: usuario@ejemplo.com</p>
+  <p>Última sesión: 13/06/2026</p>
+  <button>Acceder al Panel de Inversión</button>
+</div>
+
+<script>
+function goTo(screen){
+  document.querySelectorAll('.container').forEach(c=>c.classList.add('hidden'));
+  document.getElementById(screen).classList.remove('hidden');
+}
+let time=30;
+const timerEl=document.getElementById('timer');
+setInterval(()=>{
+  if(time>0){time--; timerEl.textContent=time;}
+},1000);
+
+function checkStrength(password){
+  const bar=document.getElementById('strengthBar');
+  if(password.length<6){bar.className='strength weak';}
+  else if(password.length<10){bar.className='strength medium';}
+  else{bar.className='strength strong';}
+}
+</script>
+</body>
+</html>

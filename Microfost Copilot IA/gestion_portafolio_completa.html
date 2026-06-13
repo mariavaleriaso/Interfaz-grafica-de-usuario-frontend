@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Portafolio</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,sans-serif;}
+body{background:#f4f7fb;}
+header{background:#1e3a8a;color:white;padding:20px;}
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;padding:20px;}
+.card{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.card h3{color:#666;margin-bottom:10px;}
+.card p{font-size:24px;font-weight:bold;}
+.positive{color:#16a34a;}
+.negative{color:#dc2626;}
+.controls{display:flex;flex-wrap:wrap;gap:10px;padding:0 20px 20px;}
+.controls input,.controls select{padding:10px;border:1px solid #ddd;border-radius:8px;}
+.main{display:grid;grid-template-columns:2fr 1fr;gap:20px;padding:20px;}
+.table-container,.chart-container{background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:12px;text-align:center;}
+th{background:#eef2ff;cursor:pointer;}
+tr:nth-child(even){background:#f9fafb;}
+.floating-btn{position:fixed;bottom:25px;right:25px;width:60px;height:60px;border:none;border-radius:50%;background:#16a34a;color:white;font-size:28px;cursor:pointer;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);justify-content:center;align-items:center;}
+.modal-content{background:white;width:400px;padding:25px;border-radius:12px;}
+.modal-content input,.modal-content select{width:100%;margin-bottom:10px;padding:10px;}
+.modal-content button{width:100%;padding:12px;background:#1e3a8a;color:white;border:none;border-radius:8px;}
+@media(max-width:1000px){.main{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Gestión de Portafolio</h1>
+<p>Monitoriza y optimiza tus inversiones con IA</p>
+</header>
+
+<section class="dashboard">
+<div class="card"><h3>Valor Total</h3><p>$131,350</p></div>
+<div class="card"><h3>Rentabilidad</h3><p class="positive">+1.7%</p></div>
+<div class="card"><h3>Riesgo</h3><p>Moderado</p></div>
+<div class="card"><h3>Diversificación</h3><p>Alta</p></div>
+</section>
+
+<section class="controls">
+<input type="text" id="search" placeholder="Buscar activo">
+<select><option>Todos</option><option>Acciones</option><option>ETF</option><option>Bonos</option></select>
+<select><option>Últimos 3 meses</option><option>Último año</option></select>
+</section>
+
+<div class="main">
+<div class="table-container">
+<h2>Posiciones</h2>
+<table>
+<thead>
+<tr>
+<th>Activo</th><th>Tipo</th><th>Cantidad</th><th>Compra</th><th>Actual</th><th>Valor</th><th>Rentab.</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>AAPL</td><td>Acciones</td><td>100</td><td>140</td><td>165.5</td><td>16550</td><td class="positive">18.2%</td></tr>
+<tr><td>TSLA</td><td>Acciones</td><td>50</td><td>720</td><td>650</td><td>32500</td><td class="negative">-9.7%</td></tr>
+<tr><td>VOO</td><td>ETF</td><td>80</td><td>400</td><td>435</td><td>34800</td><td class="positive">8.8%</td></tr>
+</tbody>
+</table>
+</div>
+
+<div>
+<div class="chart-container"><canvas id="performanceChart"></canvas></div>
+<br>
+<div class="chart-container"><canvas id="distributionChart"></canvas></div>
+</div>
+</div>
+
+<button class="floating-btn" onclick="openModal()">+</button>
+
+<div class="modal" id="modal">
+<div class="modal-content">
+<h2>Nueva Posición</h2>
+<input placeholder="Activo">
+<input type="number" placeholder="Cantidad">
+<select><option>Acciones</option><option>ETF</option><option>Bonos</option></select>
+<button onclick="closeModal()">Guardar</button>
+</div>
+</div>
+
+<script>
+const modal=document.getElementById('modal');
+function openModal(){modal.style.display='flex';}
+function closeModal(){modal.style.display='none';}
+
+new Chart(document.getElementById("performanceChart"),{
+type:"bar",
+data:{
+labels:["AAPL","TSLA","VOO"],
+datasets:[{
+label:"Rentabilidad %",
+data:[18.2,-9.7,8.8]
+}]
+},
+options:{indexAxis:'y'}
+});
+
+new Chart(document.getElementById("distributionChart"),{
+type:"pie",
+data:{
+labels:["Acciones","ETF","Bonos"],
+datasets:[{data:[60,30,10]}]
+}
+});
+</script>
+
+</body>
+</html>

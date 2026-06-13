@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Generador de Estrategias de Inversión IA</title>
+<style>
+body{font-family:Arial;background:#eef2f7;margin:0;padding:30px;color:#17203a}
+header{background:#10294a;color:white;padding:25px;border-radius:15px}
+.card{background:white;margin-top:20px;padding:20px;border-radius:15px;box-shadow:0 5px 15px #ccc}
+button{padding:12px 20px;border:0;border-radius:8px;cursor:pointer}
+.generar{background:#159420;color:white}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+td,th{padding:12px;border-bottom:1px solid #ddd;cursor:pointer}
+.bajo{background:#239238;color:white;padding:5px 12px;border-radius:15px}
+.medio{background:#e7aa00;color:white;padding:5px 12px;border-radius:15px}
+.alto{background:#e53232;color:white;padding:5px 12px;border-radius:15px}
+.modal{display:none;position:fixed;inset:0;background:#0007;align-items:center;justify-content:center}
+.box{background:white;padding:25px;border-radius:15px;width:400px}
+input,select{width:100%;padding:10px;margin:10px 0}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>📈 Generador de Estrategias de Inversión IA</h1>
+<button class="generar" onclick="abrir()">Generar Estrategia</button>
+</header>
+
+<div class="card">
+<h2>Activos Recomendados</h2>
+
+<table>
+<thead>
+<tr>
+<th onclick="ordenar()">Activo</th>
+<th>Categoría</th>
+<th>Asignación</th>
+<th>Rendimiento</th>
+<th>Riesgo</th>
+</tr>
+</thead>
+
+<tbody id="tabla"></tbody>
+</table>
+</div>
+
+
+<div class="card">
+<h2>Métricas Clave</h2>
+<p>Rentabilidad: <b id="rent">7.8%</b></p>
+<p>Volatilidad: <b id="vol">9.3%</b></p>
+<p>Diversificación: <b>Alta</b></p>
+
+<canvas id="grafico"></canvas>
+</div>
+
+
+
+<div class="modal" id="modal">
+
+<div class="box">
+
+<h2>Configurar Estrategia</h2>
+
+Capital:
+<input id="capital" value="50000">
+
+Horizonte:
+<select>
+<option>1 año</option>
+<option>3 años</option>
+<option>5 años</option>
+</select>
+
+Riesgo:
+<select id="riesgo">
+<option>Bajo</option>
+<option>Moderado</option>
+<option>Alto</option>
+</select>
+
+Sector:
+<select>
+<option>Tecnología</option>
+<option>Salud</option>
+<option>Energía</option>
+</select>
+
+<button class="generar" onclick="generar()">
+Crear estrategia
+</button>
+
+</div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+let activos=[
+["Apple (AAPL)","Acciones",25,8.5,"Medio"],
+["Johnson & Johnson","Acciones",20,6.2,"Bajo"],
+["Energy ETF","ETF",25,7.1,"Medio"],
+["Emerging Markets","Fondo",15,10,"Alto"],
+["Global Bond Fund","Bonos",15,4,"Bajo"]
+];
+
+
+function mostrar(){
+
+let html="";
+
+activos.forEach(a=>{
+
+let clase=a[4]=="Bajo"?"bajo":a[4]=="Medio"?"medio":"alto";
+
+html+=`
+<tr>
+<td>${a[0]}</td>
+<td>${a[1]}</td>
+<td>${a[2]}%</td>
+<td>${a[3]}%</td>
+<td><span class="${clase}">${a[4]}</span></td>
+</tr>`;
+
+});
+
+document.getElementById("tabla").innerHTML=html;
+
+}
+
+
+function ordenar(){
+
+activos.reverse();
+mostrar();
+
+}
+
+
+function abrir(){
+
+document.getElementById("modal").style.display="flex";
+
+}
+
+
+function generar(){
+
+let riesgo=document.getElementById("riesgo").value;
+
+activos.forEach(a=>{
+a[2]=Math.floor(Math.random()*20)+15;
+});
+
+let total=activos.reduce((s,a)=>s+a[2],0);
+
+activos.forEach(a=>{
+a[2]=Math.round(a[2]/total*100);
+});
+
+
+document.getElementById("rent").innerHTML=
+riesgo=="Alto"?"12%":riesgo=="Bajo"?"5%":"8%";
+
+document.getElementById("vol").innerHTML=
+riesgo=="Alto"?"15%":"9%";
+
+mostrar();
+
+document.getElementById("modal").style.display="none";
+
+}
+
+
+mostrar();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Predicción Financiera IA</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+*{box-sizing:border-box;font-family:Segoe UI,Arial}
+body{margin:0;background:#eef2f7;color:#17203a}
+
+header{
+background:#10294a;color:white;padding:25px 40px;
+display:flex;justify-content:space-between;align-items:center
+}
+
+button{
+padding:12px 20px;border:0;border-radius:8px;
+cursor:pointer
+}
+
+.container{padding:25px}
+
+.filters{
+background:white;padding:20px;border-radius:15px;
+display:flex;gap:15px;box-shadow:0 5px 15px #ccc
+}
+
+select{
+padding:10px;border-radius:8px
+}
+
+.cards{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:20px;margin-top:25px
+}
+
+.card{
+background:white;padding:20px;border-radius:15px;
+box-shadow:0 5px 15px #ccc
+}
+
+.signal{
+font-size:28px;font-weight:bold;
+padding:10px;border-radius:12px;
+color:white;display:inline-block
+}
+
+.BUY{background:#149437}
+.SELL{background:#d92323}
+.HOLD{background:#e5a900}
+
+.chart{
+background:white;margin-top:25px;
+padding:20px;border-radius:15px
+}
+
+table{
+width:100%;margin-top:20px;
+border-collapse:collapse;background:white
+}
+
+th,td{padding:15px;border-bottom:1px solid #ddd}
+
+#update{
+font-size:14px;color:#555
+}
+
+</style>
+</head>
+
+
+<body>
+
+<header>
+<h1>🤖 Predicción Financiera SVC + VotingClassifier</h1>
+<h3 id="update">Actualizando...</h3>
+</header>
+
+
+<div class="container">
+
+
+<div class="filters">
+
+<select id="market">
+<option>Todos los mercados</option>
+<option>NASDAQ</option>
+<option>NYSE</option>
+</select>
+
+<select id="sector">
+<option>Todos los sectores</option>
+<option>Tecnología</option>
+<option>Salud</option>
+<option>Energía</option>
+</select>
+
+<select id="period">
+<option>1 mes</option>
+<option>6 meses</option>
+<option>1 año</option>
+</select>
+
+<button onclick="ordenar()">Ordenar confianza ↓</button>
+
+</div>
+
+
+<div class="cards" id="cards"></div>
+
+
+<div class="chart">
+
+<h2>Tendencia histórica y predicción</h2>
+
+<canvas id="grafico"></canvas>
+
+</div>
+
+
+<table>
+
+<thead>
+<tr>
+<th>Activo</th>
+<th>Señal</th>
+<th>Confianza</th>
+<th>Tendencia</th>
+<th>Variación esperada</th>
+</tr>
+</thead>
+
+<tbody id="tabla"></tbody>
+
+</table>
+
+
+</div>
+
+
+
+<script>
+
+
+let activos=[
+
+{
+nombre:"Apple",
+signal:"BUY",
+conf:92,
+trend:"Alcista",
+var:"+8.4%"
+},
+
+{
+nombre:"Tesla",
+signal:"HOLD",
+conf:74,
+trend:"Lateral",
+var:"+1.2%"
+},
+
+{
+nombre:"Microsoft",
+signal:"BUY",
+conf:88,
+trend:"Alcista",
+var:"+6.8%"
+},
+
+{
+nombre:"Energy ETF",
+signal:"SELL",
+conf:81,
+trend:"Bajista",
+var:"-4.5%"
+}
+
+];
+
+
+let chart;
+
+
+function render(){
+
+
+let cards="";
+let rows="";
+
+
+activos.forEach(a=>{
+
+
+cards+=`
+
+<div class="card">
+
+<h2>${a.nombre}</h2>
+
+<div class="signal ${a.signal}">
+${a.signal}
+</div>
+
+<p>Confianza:
+<b>${a.conf}%</b></p>
+
+<p>Tendencia:
+${a.trend}</p>
+
+<p>Variación:
+${a.var}</p>
+
+</div>
+
+
+`;
+
+
+rows+=`
+
+<tr>
+<td>${a.nombre}</td>
+<td>${a.signal}</td>
+<td>${a.conf}%</td>
+<td>${a.trend}</td>
+<td>${a.var}</td>
+</tr>
+
+`;
+
+});
+
+
+document.getElementById("cards").innerHTML=cards;
+document.getElementById("tabla").innerHTML=rows;
+
+grafico();
+
+}
+
+
+
+function ordenar(){
+
+activos.sort((a,b)=>b.conf-a.conf);
+render();
+
+}
+
+
+
+function grafico(){
+
+
+if(chart) chart.destroy();
+
+
+chart=new Chart(
+document.getElementById("grafico"),
+{
+
+type:"line",
+
+data:{
+
+labels:[
+"Día 1","Día 2","Día 3",
+"Día 4","Día 5","Futuro"
+],
+
+datasets:[
+
+{
+label:"Precio histórico",
+data:[100,105,103,110,115,120]
+},
+
+{
+label:"Predicción IA",
+data:[null,null,null,110,118,128]
+}
+
+]
+
+}
+
+});
+
+
+}
+
+
+
+function actualizar(){
+
+
+activos.forEach(a=>{
+
+a.conf=Math.floor(Math.random()*20)+75;
+
+});
+
+
+document.getElementById("update").innerHTML=
+"Última actualización: "+new Date().toLocaleTimeString();
+
+
+render();
+
+}
+
+
+render();
+
+setInterval(actualizar,5000);
+
+
+</script>
+
+</body>
+</html>
