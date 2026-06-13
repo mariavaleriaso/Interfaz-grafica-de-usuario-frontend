@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo 6.5 - Análisis de Noticias con NLP</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome para Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f1f5f9;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        .custom-card {
+            background-color: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 0.75rem;
+        }
+        .bullish-border { border-left: 4px solid #10b981; }
+        .bearish-border { border-left: 4px solid #ef4444; }
+        .neutral-border { border-left: 4px solid #6b7280; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Navegación / Encabezado -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-800 gap-4">
+            <div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Gemini AI (4.8) - Motor de Sentimiento</span>
+                <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                    <i class="fa-solid fa-newspaper text-emerald-500"></i> Módulo 6.5 – Análisis de Noticias con NLP
+                </h1>
+            </div>
+            <div class="flex gap-3">
+                <a href="lstm_forecast.html" class="px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition border border-gray-700 flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Módulo 6.4 (LSTM)
+                </a>
+                <a href="index.html" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-house"></i> Panel Principal
+                </a>
+            </div>
+        </header>
+
+        <!-- Barra Superior de Filtros Básicos -->
+        <div class="custom-card p-4 mb-6 flex flex-wrap gap-4 items-center justify-between bg-gray-900/50">
+            <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Filtrar por Activo (Ticker)</label>
+                    <select id="ticker-filter" class="bg-gray-800 border border-gray-700 text-sm rounded px-3 py-1.5 text-white outline-none focus:border-emerald-500">
+                        <option value="ALL">Todos los Activos</option>
+                        <option value="AAPL">AAPL (Apple Inc.)</option>
+                        <option value="MSFT">MSFT (Microsoft)</option>
+                        <option value="TSLA">TSLA (Tesla)</option>
+                        <option value="NVDA">NVDA (NVIDIA)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Fecha de Inicio</label>
+                    <input type="date" id="date-start" value="2026-06-01" class="bg-gray-800 border border-gray-700 text-sm rounded px-3 py-1 text-white outline-none focus:border-emerald-500 font-mono">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Fecha de Fin</label>
+                    <input type="date" id="date-end" value="2026-06-15" class="bg-gray-800 border border-gray-700 text-sm rounded px-3 py-1 text-white outline-none focus:border-emerald-500 font-mono">
+                </div>
+            </div>
+            <div class="text-xs text-gray-400 bg-gray-950 px-3 py-1.5 rounded border border-gray-800">
+                <span class="text-emerald-400 font-bold">VADER Analyzer</span> + <span class="text-blue-400 font-bold">GPT-4o Complementario</span>
+            </div>
+        </div>
+
+        <!-- Layout de Cuadrícula Principal -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Bloque de Visualizaciones / Métricas Globales (4 Columnas) -->
+            <div class="lg:col-span-5 flex flex-col gap-6 order-1 lg:order-2">
+                
+                <!-- Velocímetro / Gauge de Sentimiento Agregado -->
+                <div class="custom-card p-5 flex flex-col items-center justify-center text-center shadow-xl relative overflow-hidden">
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-2 self-start w-full text-left border-b border-gray-800 pb-2">
+                        <i class="fa-solid fa-gauge-high text-indigo-400"></i> Sentimiento Agregado del Mercado
+                    </h3>
+                    
+                    <div class="relative w-48 h-28 mt-4 flex justify-center items-end overflow-hidden">
+                        <!-- Medio Círculo de Fondo -->
+                        <div class="absolute inset-0 rounded-t-full bg-gradient-to-r from-red-500 via-gray-400 to-emerald-500 opacity-20"></div>
+                        <!-- Arco Principal Grueso -->
+                        <div class="w-44 h-22 rounded-t-full border-[16px] border-transparent border-t-emerald-500 border-l-red-500 border-r-emerald-500 relative"></div>
+                        
+                        <!-- Aguja Indicadora Dinámica (Posicionada en Bullish Moderado para el Mockup) -->
+                        <div class="absolute bottom-0 left-1/2 w-2 h-16 bg-white origin-bottom rounded-t" style="transform: translateX(-50%) rotate(42deg); transition: transform 1s ease-out;"></div>
+                        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-gray-900 shadow"></div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <span class="text-2xl font-black text-emerald-400 tracking-wide block">BULLISH</span>
+                        <span class="text-xs text-gray-400 font-mono">Compound Score Promedio: <b class="text-white">+0.382</b></span>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Distribución del Día (Barras Horizontales) -->
+                <div class="custom-card p-5 shadow-xl">
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">
+                        <i class="fa-solid fa-chart-bar text-emerald-400"></i> Distribución de Sentimiento Colectivo
+                    </h3>
+                    <div class="h-48 relative flex items-center justify-center">
+                        <canvas id="sentiment-bar-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Panel de Estado Operativo de Modelos -->
+                <div class="custom-card p-4 text-xs space-y-3 bg-gray-950/40">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Umbrales de Clasificación</span>
+                    <div class="flex justify-between items-center text-gray-300 font-mono bg-gray-900 p-2 rounded">
+                        <span class="text-emerald-400 font-bold"><i class="fa-solid fa-arrow-trend-up"></i> BULLISH</span>
+                        <span>Compound &ge; +0.05</span>
+                    </div>
+                    <div class="flex justify-between items-center text-gray-300 font-mono bg-gray-900 p-2 rounded">
+                        <span class="text-gray-400 font-bold"><i class="fa-solid fa-equals"></i> NEUTRAL</span>
+                        <span>-0.05 &lt; C &lt; +0.05</span>
+                    </div>
+                    <div class="flex justify-between items-center text-gray-300 font-mono bg-gray-900 p-2 rounded">
+                        <span class="text-red-400 font-bold"><i class="fa-solid fa-arrow-trend-down"></i> BEARISH</span>
+                        <span>Compound &le; -0.05</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feed de Noticias Financieras Simuladas (7 Columnas) -->
+            <div class="lg:col-span-7 flex flex-col gap-4 order-2 lg:order-1" id="news-feed">
+                <!-- Las tarjetas de noticias se inyectan dinámicamente con JS -->
+            </div>
+        </div>
+
+        <footer class="mt-12 text-center text-xs text-gray-600 border-t border-gray-900 pt-4">
+            Módulo de Procesamiento de Lenguaje Natural Cuantitativo v4.8 • Desarrollado con Chart.js y Tailwind
+        </footer>
+    </div>
+
+    <!-- Script de Lógica de Noticias y Filtros -->
+    <script>
+        // Set de datos simulados realistas de 15 noticias en español (AAPL, MSFT, TSLA, NVDA)
+        const mockNews = [
+            {
+                id: 1,
+                ticker: "AAPL",
+                titulo: "Apple firma alianza clave de IA y rompe máximos históricos",
+                fuente: "Bloomberg Global",
+                fecha: "2026-06-13",
+                texto: "La firma de Cupertino anunció la integración profunda de sus nuevos núcleos neuronales patentados con infraestructuras cloud líderes. Analistas prevén un incremento masivo en las suscripciones de servicios premium.",
+                vader: 0.84,
+                sentimiento: "BULLISH"
+            },
+            {
+                id: 2,
+                ticker: "AAPL",
+                titulo: "Retrasos potenciales en la cadena de suministro del nuevo dispositivo premium",
+                fuente: "Reuters Finanzas",
+                fecha: "2026-06-12",
+                texto: "Ciertos componentes críticos de visualización óptica están experimentando cuellos de botella en las fábricas aliadas en Asia. Esto podría impactar negativamente las entregas iniciales del próximo trimestre bursátil.",
+                vader: -0.42,
+                sentimiento: "BEARISH"
+            },
+            {
+                id: 3,
+                ticker: "MSFT",
+                titulo: "Microsoft supera expectativas de ingresos trimestrales impulsado por Azure",
+                fuente: "Wall Street Journal",
+                fecha: "2026-06-11",
+                texto: "La demanda de computación cuántica híbrida corporativa empuja las utilidades netas al alza. El flujo de caja operativo incrementó un 18% interanual superando la guía previa proporcionada por la mesa directiva.",
+                vader: 0.76,
+                sentimiento: "BULLISH"
+            },
+            {
+                id: 4,
+                ticker: "NVDA",
+                titulo: "NVIDIA devela superchip H300 enfocado en robótica autónoma avanzada",
+                fuente: "TechCrunch",
+                fecha: "2026-06-10",
+                texto: "La arquitectura disruptiva promete un rendimiento computacional cinco veces superior a la generación previa con un consumo energético optimizado. Los pedidos anticipados rompen récords en el sector automotriz.",
+                vader: 0.89,
+                sentimiento: "BULLISH"
+            },
+            {
+                id: 5,
+                ticker: "TSLA",
+                titulo: "Reguladores abren investigación preliminar sobre el sistema de conducción autónoma",
+                fuente: "Financial Times",
+                fecha: "2026-06-09",
+                texto: "La entidad reguladora de seguridad vial de EE.UU. solicitó informes exhaustivos tras registrarse dos incidentes inusuales en autopistas interestatales. Las acciones muestran volatilidad moderada a la baja fuera de horario.",
+                vader: -0.61,
+                sentimiento: "BEARISH"
+            },
+            {
+                id: 6,
+                ticker: "AAPL",
+                titulo: "Mesa directiva de Apple aprueba incremento del 10% en el pago de dividendos",
+                fuente: "MarketWatch",
+                fecha: "2026-06-08",
+                texto: "Con una posición de liquidez inquebrantable, la tecnológica continúa su agresivo programa de recompra de acciones y premia a los inversores a largo plazo de forma constante.",
+                vader: 0.45,
+                sentimiento: "BULLISH"
+            },
+            {
+                id: 7,
+                ticker: "MSFT",
+                titulo: "Microsoft consolida inversiones en ciberseguridad corporativa avanzada",
+                fuente: "El Economista",
+                fecha: "2026-06-07",
+                texto: "Anuncio oficial detalla la adquisición estratégica de dos firmas boutique israelíes líderes en mitigación de amenazas persistentes avanzadas en la nube. El mercado reacciona de forma estática pero favorable.",
+                vader: 0.12,
+                sentimiento: "BULLISH"
+            },
+            {
+                id: 8,
+                ticker: "TSLA",
+                titulo: "Tesla inaugura expansión masiva de la Gigafactory con enfoque sustentable",
+                fuente: "Cinco Días",
+                fecha: "2026-06-06",
+                texto: "La nueva sección aumentará la capacidad instalada para celdas de batería de nueva generación en un 35%. La cadena logística local se verá beneficiada significativamente reduciendo costes de traslado transfronterizo.",
+                vader: 0.58,
+                sentimiento: "BULLISH"
+            },
+            {
+                id: 9,
+                ticker: "NVDA",
+                titulo: "Toma de ganancias técnica presiona temporalmente la cotización de NVIDIA",
+                fuente: "Investing.com",
+                fecha: "2026-06-05",
+                texto: "Tras el rally prolongado de las últimas dos semanas, fondos institucionales rebalancean carteras provocando un ajuste menor. Los fundamentos de crecimiento de la compañía permanecen inalterados según analistas de Morgan Stanley.",
+                vader: -0.02,
+                sentimiento: "NEUTRAL"
+            },
+            {
+                id: 10,
+                ticker: "AAPL",
+                titulo: "Apple lanza su plataforma financiera nativa descentralizada en Europa",
+                fuente: "Expansión",
+                fecha: "2026-06-04",
+                texto: "Cumpliendo con los marcos regulatorios vigentes, la tecnológica introduce su ecosistema de cuentas de ahorro y pagos integrados. Competidores bancarios tradicionales muestran preocupación por la pérdida de cuota de mercado.",
+                vader: 0.38,
+                sentimiento: "BULLISH"
+            },
+            {
+                id: 11,
+                ticker: "MSFT",
+                titulo: "Investigadores detectan vulnerabilidad de día cero controlada en sistemas Windows",
+                fuente: "Wired",
+                fecha: "2026-06-03",
+                texto: "El equipo de respuesta rápida distribuyó un parche de emergencia inmediato de forma global. No se registraron brechas masivas de datos corporativos ni afectaciones financieras a usuarios finales.",
+                vader: -0.22,
+                sentimiento: "BEARISH"
+            },
+            {
+                id: 12,
+                ticker: "TSLA",
+                titulo: "Tesla estabiliza precios de venta de modelos masivos tras fluctuaciones de costos",
+                fuente: "Automotive News",
+                fecha: "2026-06-02",
+                texto: "La gerencia confirmó que la optimización de los metales para baterías estabiliza el margen bruto operativo, descartando la necesidad de subsidios o rebajas adicionales de precios en el mercado americano.",
+                vader: 0.04,
+                sentimiento: "NEUTRAL"
+            },
+            {
+                id: 13,
+                ticker: "NVDA",
+                titulo: "Estrategas advierten sobre posible saturación cíclica en la compra de hardware de IA",
+                fuente: "Goldman Sachs Insights",
+                fecha: "2026-06-02",
+                texto: "Un reporte interno sugiere que si bien la demanda corporativa es robusta, el ritmo de gasto de las hyperscalers podría moderarse a finales de año fiscales con el fin de consolidar la infraestructura adquirida.",
+                vader: -0.35,
+                sentimiento: "BEARISH"
+            },
+            {
+                id: 14,
+                ticker: "AAPL",
+                titulo: "Apple se enfoca en patentes de biometría térmica avanzada para wearables",
+                fuente: "Patently Apple",
+                fecha: "2026-06-01",
+                texto: "La oficina de patentes publicó la concesión de metodologías no invasivas de espectroscopia láser. El desarrollo técnico aún se encuentra en etapas experimentales y se integrará en futuros dispositivos de consumo masivo.",
+                vader: 0.00,
+                sentimiento: "NEUTRAL"
+            },
+            {
+                id: 15,
+                ticker: "MSFT",
+                titulo: "Sindicato menor de la división de videojuegos plantea demandas laborales estructurales",
+                fuente: "IGN Business",
+                fecha: "2026-06-01",
+                texto: "Un grupo reducido de probadores de software solicitó revisiones de horarios y compensaciones por horas extra. Se espera un diálogo constructivo sin amenazas inminentes de paros de producción generalizados.",
+                vader: -0.15,
+                sentimiento: "BEARISH"
+            }
+        ];
+
+        // Elementos DOM
+        const feedContainer = document.getElementById('news-feed');
+        const tickerFilter = document.getElementById('ticker-filter');
+        const dateStart = document.getElementById('date-start');
+        const dateEnd = document.getElementById('date-end');
+
+        let chartInstance = null;
+
+        // Función para renderizar el listado y actualizar estadísticas
+        function updateDashboard() {
+            const selectedTicker = tickerFilter.value;
+            const startStr = dateStart.value;
+            const endStr = dateEnd.value;
+
+            // Filtrar noticias
+            const filteredNews = mockNews.filter(item => {
+                const tickerMatch = (selectedTicker === "ALL" || item.ticker === selectedTicker);
+                const dateMatch = (item.fecha >= startStr && item.fecha <= endStr);
+                return tickerMatch && dateMatch;
+            });
+
+            // Limpiar contenedor anterior
+            feedContainer.innerHTML = "";
+
+            if (filteredNews.length === 0) {
+                feedContainer.innerHTML = `
+                    <div class="custom-card p-8 text-center text-gray-500 text-sm">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
+                        No se encontraron noticias con los criterios de filtrado actuales.
+                    </div>`;
+                updateChart(0, 0, 0);
+                return;
+            }
+
+            // Contadores de sentimiento para la gráfica
+            let bullishCount = 0;
+            let neutralCount = 0;
+            let bearishCount = 0;
+
+            // Inyectar tarjetas
+            filteredNews.forEach(news => {
+                let badgeColor = "bg-gray-800 text-gray-400 border-gray-700";
+                let badgeIcon = "fa-equals";
+                let borderClass = "neutral-border";
+                let textScoreColor = "text-gray-400";
+
+                if (news.sentimiento === "BULLISH") {
+                    bullishCount++;
+                    badgeColor = "bg-emerald-950/60 text-emerald-400 border-emerald-800";
+                    badgeIcon = "fa-arrow-trend-up";
+                    borderClass = "bullish-border";
+                    textScoreColor = "text-emerald-400";
+                } else if (news.sentimiento === "BEARISH") {
+                    bearishCount++;
+                    badgeColor = "bg-red-950/60 text-red-400 border-red-800";
+                    badgeIcon = "fa-arrow-trend-down";
+                    borderClass = "bearish-border";
+                    textScoreColor = "text-red-400";
+                } else {
+                    neutralCount++;
+                }
+
+                const card = document.createElement('div');
+                card.className = `custom-card p-5 shadow transition hover:border-gray-700 ${borderClass}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start gap-3 mb-2">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="bg-gray-800 text-gray-300 px-2 py-0.5 rounded text-[10px] font-mono font-bold border border-gray-700">${news.ticker}</span>
+                                <span class="text-xs text-gray-500">${news.fuente} • ${news.fecha}</span>
+                            </div>
+                            <h4 class="text-base font-bold text-white leading-snug">${news.titulo}</h4>
+                        </div>
+                        <span class="border px-2 py-1 rounded text-xs font-bold flex items-center gap-1.5 whitespace-nowrap ${badgeColor}">
+                            <i class="fa-solid ${badgeIcon}"></i> ${news.sentimiento}
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-400 leading-relaxed mb-3">${news.texto}</p>
+                    <div class="flex gap-4 border-t border-gray-900 pt-2 text-[11px] font-mono">
+                        <div><span class="text-gray-500">VADER Compound:</span> <span class="${textScoreColor} font-bold">${news.vader >= 0 ? '+' : ''}${news.vader.toFixed(2)}</span></div>
+                        <div><span class="text-gray-500">GPT-4o Complementario:</span> <span class="${textScoreColor} font-bold">${news.sentimiento}</span></div>
+                    </div>
+                `;
+                feedContainer.appendChild(card);
+            });
+
+            // Actualizar Gráfico de Barras
+            updateChart(bullishCount, neutralCount, bearishCount);
+        }
+
+        // Configuración y Actualización de Chart.js
+        function updateChart(bullish, neutral, bearish) {
+            const ctx = document.getElementById('sentiment-bar-chart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['BULLISH (Alza)', 'NEUTRAL', 'BEARISH (Baja)'],
+                    datasets: [{
+                        data: [bullish, neutral, bearish],
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.75)',
+                            'rgba(107, 114, 128, 0.75)',
+                            'rgba(239, 68, 68, 0.75)'
+                        ],
+                        borderColor: [
+                            '#10b981',
+                            '#6b7280',
+                            '#ef4444'
+                        ],
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#1f2937' },
+                            ticks: { color: '#9ca3af', stepSize: 1, precision: 0 }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#f3f4f6', font: { weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Listeners de Cambio en Filtros
+        tickerFilter.addEventListener('change', updateDashboard);
+        dateStart.addEventListener('change', updateDashboard);
+        dateEnd.addEventListener('change', updateDashboard);
+
+        // Renderizado Inicial
+        updateDashboard();
+    </script>
+</body>
+</html>
