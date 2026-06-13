@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InvestAI | Gestión de Portfolio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1F3864;
+      --accent: #C5961A;
+      --light: #F8FAFC;
+      --dark: #0F172A;
+      --success: #10B981;
+      --danger: #EF4444;
+      --border: #E2E8F0;
+    }
+
+    * {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--light);
+      color: var(--dark);
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background: #172945;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(31, 56, 100, 0.3);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: white;
+      transition: all 0.2s ease;
+    }
+
+    .btn-accent:hover {
+      background: #A57D15;
+      transform: translateY(-1px);
+    }
+
+    .fab {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 40;
+      animation: pulse-subtle 2s infinite;
+    }
+
+    @keyframes pulse-subtle {
+      0%, 100% { box-shadow: 0 4px 20px rgba(197, 150, 26, 0.4); }
+      50% { box-shadow: 0 4px 30px rgba(197, 150, 26, 0.6); }
+    }
+
+    .modal-backdrop {
+      backdrop-filter: blur(8px);
+      background: rgba(15, 23, 42, 0.4);
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .chart-bar {
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transform: translateX(-100%);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      100% { transform: translateX(100%); }
+    }
+
+    .table-row {
+      transition: background-color 0.15s ease;
+    }
+
+    .table-row:hover {
+      background-color: #F8FAFC;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(31, 56, 100, 0.1);
+    }
+
+    @media (max-width: 768px) {
+      .table-responsive thead {
+        display: none;
+      }
+      
+      .table-responsive tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 1rem;
+      }
+      
+      .table-responsive tbody td {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border: none;
+      }
+      
+      .table-responsive tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--primary);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center gap-3">
+          <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="#1F3864"/>
+            <path d="M10 20L16 12L22 20" stroke="#C5961A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="16" cy="12" r="2" fill="#C5961A"/>
+          </svg>
+          <h1 class="text-2xl font-bold gradient-text">InvestAI</h1>
+        </div>
+        <nav class="hidden md:flex items-center gap-6">
+          <a href="#" class="text-sm font-medium text-slate-600 hover:text-[#1F3864] transition">Dashboard</a>
+          <a href="#" class="text-sm font-semibold text-[#1F3864]">Portfolio</a>
+          <a href="#" class="text-sm font-medium text-slate-600 hover:text-[#1F3864] transition">Análisis</a>
+          <a href="#" class="text-sm font-medium text-slate-600 hover:text-[#1F3864] transition">Mercados</a>
+        </nav>
+        <div class="flex items-center gap-3">
+          <button class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition">
+            <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+          </button>
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#1F3864] to-[#C5961A] flex items-center justify-center text-white font-semibold text-sm">
+            JD
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Stats Overview -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <article class="card rounded-xl p-6">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-sm font-medium text-slate-500">Valor Total</p>
+          <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+            <svg class="w-5 h-5 text-[#1F3864]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+        </div>
+        <p class="text-3xl font-bold text-[#1F3864]">$127,450.00</p>
+        <p class="text-sm text-emerald-600 font-medium mt-1">+12.4% este mes</p>
+      </article>
+
+      <article class="card rounded-xl p-6">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-sm font-medium text-slate-500">P&L Total</p>
+          <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+          </div>
+        </div>
+        <p class="text-3xl font-bold text-emerald-600">+$14,230.50</p>
+        <p class="text-sm text-slate-500 mt-1">+12.57% rendimiento</p>
+      </article>
+
+      <article class="card rounded-xl p-6">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-sm font-medium text-slate-500">Posiciones</p>
+          <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
+            <svg class="w-5 h-5 text-[#C5961A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+        </div>
+        <p class="text-3xl font-bold text-[#1F3864]">8</p>
+        <p class="text-sm text-slate-500 mt-1">Activos diferentes</p>
+      </article>
+
+      <article class="card rounded-xl p-6">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-sm font-medium text-slate-500">Mejor Rendimiento</p>
+          <div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+            </svg>
+          </div>
+        <p class="text-3xl font-bold text-[#1F3864]">NVDA</p>
+        <p class="text-sm text-emerald-600 font-medium mt-1">+34.2% retorno</p>
+      </article>
+    </section>
+
+    <!-- Performance Chart Section -->
+    <section class="card rounded-xl p-6 mb-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-xl font-bold text-[#1F3864]">Rendimiento por Activo</h2>
+          <p class="text-sm text-slate-500 mt-1">Comparativa de P&L porcentual</p>
+        </div>
+        <select class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white">
+          <option>Últimos 30 días</option>
+          <option>Últimos 90 días</option>
+          <option>YTD</option>
+        </select>
+      </div>
+      
+      <div class="space-y-4" id="performanceChart">
+        <!-- Chart bars will be generated by JS -->
+      </div>
+    </section>
+
+    <!-- Positions Table -->
+    <section class="card rounded-xl overflow-hidden">
+      <div class="p-6 border-b border-slate-200">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-[#1F3864]">Mis Posiciones</h2>
+            <p class="text-sm text-slate-500 mt-1">Gestión completa de tu portfolio</p>
+          </div>
+          <div class="flex gap-2">
+            <button class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
+              Exportar
+            </button>
+            <button class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
+              Filtrar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full table-responsive" id="positionsTable">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="text-left px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">Activo</th>
+              <th class="text-right px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">Cantidad</th>
+              <th class="text-right px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">Costo Promedio</th>
+              <th class="text-right px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">Valor Actual</th>
+              <th class="text-right px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">P&L</th>
+              <th class="text-center px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100" id="positionsBody">
+            <!-- Preloaded example data -->
+            <tr class="table-row">
+              <td class="px-6 py-4" data-label="Activo">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xs">NVDA</div>
+                  <div>
+                    <p class="font-semibold text-slate-900">NVIDIA Corp</p>
+                    <p class="text-xs text-slate-500">Tecnología</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-right font-medium text-slate-900" data-label="Cantidad">125</td>
+              <td class="px-6 py-4 text-right text-slate-600" data-label="Costo Promedio">$82.40</td>
+              <td class="px-6 py-4 text-right font-semibold text-slate-900" data-label="Valor Actual">$110.58</td>
+              <td class="px-6 py-4 text-right" data-label="P&L">
+                <span class="inline-flex items-center gap-1 font-semibold text-emerald-600">
+                  +$3,522.50
+                  <span class="text-xs">(+34.2%)</span>
+                </span>
+              </td>
+              <td class="px-6 py-4 text-center" data-label="Acciones">
+                <button class="text-slate-400 hover:text-[#1F3864] transition">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 5a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr class="table-row">
+              <td class="px-6 py-4" data-label="Activo">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs">AAPL</div>
+                  <div>
+                    <p class="font-semibold text-slate-900">Apple Inc</p>
+                    <p class="text-xs text-slate-500">Tecnología</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-right font-medium text-slate-900" data-label="Cantidad">80</td>
+              <td class="px-6 py-4 text-right text-slate-600" data-label="Costo Promedio">$165.20</td>
+              <td class="px-6 py-4 text-right font-semibold text-slate-900" data-label="Valor Actual">$178.45</td>
+              <td class="px-6 py-4 text-right" data-label="P&L">
+                <span class="inline-flex items-center gap-1 font-semibold text-emerald-600">
+                  +$1,060.00
+                  <span class="text-xs">(+8.0%)</span>
+                </span>
+              </td>
+              <td class="px-6 py-4 text-center" data-label="Acciones">
+                <button class="text-slate-400 hover:text-[#1F3864] transition">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 5a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr class="table-row">
+              <td class="px-6 py-4" data-label="Activo">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white font-bold text-xs">TSLA</div>
+                  <div>
+                    <p class="font-semibold text-slate-900">Tesla Inc</p>
+                    <p class="text-xs text-slate-500">Automotriz</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-right font-medium text-slate-900" data-label="Cantidad">45</td>
+              <td class="px-6 py-4 text-right text-slate-600" data-label="Costo Promedio">$245.80</td>
+              <td class="px-6 py-4 text-right font-semibold text-slate-900" data-label="Valor Actual">$228.30</td>
+              <td class="px-6 py-4 text-right" data-label="P&L">
+                <span class="inline-flex items-center gap-1 font-semibold text-red-600">
+                  -$787.50
+                  <span class="text-xs">(-7.1%)</span>
+                </span>
+              </td>
+              <td class="px-6 py-4 text-center" data-label="Acciones">
+                <button class="text-slate-400 hover:text-[#1F3864] transition">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 5a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr class="table-row">
+              <td class="px-6 py-4" data-label="Activo">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold text-xs">MSFT</div>
+                  <div>
+                    <p class="font-semibold text-slate-900">Microsoft Corp</p>
+                    <p class="text-xs text-slate-500">Tecnología</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-right font-medium text-slate-900" data-label="Cantidad">60</td>
+              <td class="px-6 py-4 text-right text-slate-600" data-label="Costo Promedio">$298.50</td>
+              <td class="px-6 py-4 text-right font-semibold text-slate-900" data-label="Valor Actual">$335.72</td>
+              <td class="px-6 py-4 text-right" data-label="P&L">
+                <span class="inline-flex items-center gap-1 font-semibold text-emerald-600">
+                  +$2,233.20
+                  <span class="text-xs">(+12.5%)</span>
+                </span>
+              </td>
+              <td class="px-6 py-4 text-center" data-label="Acciones">
+                <button class="text-slate-400 hover:text-[#1F3864] transition">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 5a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Floating Add Button -->
+  <button id="addPositionBtn" class="fab btn-accent w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform" aria-label="Agregar posición">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+    </svg>
+  </button>
+
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-backdrop fixed inset-0" id="modalBackdrop"></div>
+    <div class="fixed inset-0 overflow-y-auto">
+      <div class="flex min-h-full items-center justify-center p-4">
+        <div class="modal-content relative bg-white rounded-2xl shadow-2xl max-w-md w-full">
+          <div class="p-6 border-b border-slate-200">
+            <div class="flex items-center justify-between">
+              <h3 id="modalTitle" class="text-xl font-bold text-[#1F3864]">Agregar Nueva Posición</h3>
+              <button id="closeModal" class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center transition" aria-label="Cerrar modal">
+                <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <form id="positionForm" class="p-6 space-y-5">
+            <div>
+              <label for="asset" class="block text-sm font-semibold text-slate-700 mb-2">Activo</label>
+              <input 
+                type="text" 
+                id="asset" 
+                name="asset" 
+                required 
+                placeholder="ej. AAPL"
+                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm transition"
+              />
+            </div>
+
+            <div>
+              <label for="company" class="block text-sm font-semibold text-slate-700 mb-2">Nombre Empresa</label>
+              <input 
+                type="text" 
+                id="company" 
+                name="company" 
+                required 
+                placeholder="ej. Apple Inc"
+                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm transition"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="quantity" class="block text-sm font-semibold text-slate-700 mb-2">Cantidad</label>
+                <input 
+                  type="number" 
+                  id="quantity" 
+                  name="quantity" 
+                  required 
+                  min="1" 
+                  step="1"
+                  placeholder="100"
+                  class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm transition"
+                />
+              </div>
+
+              <div>
+                <label for="avgCost" class="block text-sm font-semibold text-slate-700 mb-2">Costo Promedio</label>
+                <input 
+                  type="number" 
+                  id="avgCost" 
+                  name="avgCost" 
+                  required 
+                  min="0" 
+                  step="0.01"
+                  placeholder="150.00"
+                  class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label for="currentValue" class="block text-sm font-semibold text-slate-700 mb-2">Valor Actual</label>
+              <input 
+                type="number" 
+                id="currentValue" 
+                name="currentValue" 
+                required 
+                min="0" 
+                step="0.01"
+                placeholder="155.50"
+                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm transition"
+              />
+            </div>
+
+            <div class="flex gap-3 pt-2">
+              <button 
+                type="button" 
+                id="cancelBtn"
+                class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                class="flex-1 btn-primary px-4 py-2.5 rounded-lg text-sm font-semibold"
+              >
+                Agregar Posición
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Portfolio data
+    const portfolioData = [
+      { asset: 'NVDA', company: 'NVIDIA Corp', quantity: 125, avgCost: 82.40, currentValue: 110.58, sector: 'Tecnología' },
+      { asset: 'AAPL', company: 'Apple Inc', quantity: 80, avgCost: 165.20, currentValue: 178.45, sector: 'Tecnología' },
+      { asset: 'TSLA', company: 'Tesla Inc', quantity: 45, avgCost: 245.80, currentValue: 228.30, sector: 'Automotriz' },
+      { asset: 'MSFT', company: 'Microsoft Corp', quantity: 60, avgCost: 298.50, currentValue: 335.72, sector: 'Tecnología' }
+    ];
+
+    // Calculate P&L
+    function calculatePnL(avgCost, currentValue, quantity) {
+      const totalInvestment = avgCost * quantity;
+      const currentTotal = currentValue * quantity;
+      const pnlValue = currentTotal - totalInvestment;
+      const pnlPercent = ((currentValue - avgCost) / avgCost) * 100;
+      return { value: pnlValue, percent: pnlPercent };
+    }
+
+    // Render Performance Chart
+    function renderPerformanceChart() {
+      const chartContainer = document.getElementById('performanceChart');
+      const maxPercent = Math.max(...portfolioData.map(item => Math.abs(calculatePnL(item.avgCost, item.currentValue, item.quantity).percent)));
+      
+      chartContainer.innerHTML = portfolioData.map(item => {
+        const pnl = calculatePnL(item.avgCost, item.currentValue, item.quantity);
+        const isPositive = pnl.percent >= 0;
+        const barWidth = (Math.abs(pnl.percent) / maxPercent) * 100;
+        const barColor = isPositive ? 'bg-emerald-500' : 'bg-red-500';
+        
+        return `
+          <div class="group">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-slate-900 text-sm">${item.asset}</span>
+                <span class="text-xs text-slate-500">${item.company}</span>
+              </div>
+              <span class="font-bold text-sm ${isPositive ? 'text-emerald-600' : 'text-red-600'}">
+                ${isPositive ? '+' : ''}${pnl.percent.toFixed(2)}%
+              </span>
+            </div>
+            <div class="relative h-8 bg-slate-100 rounded-lg overflow-hidden">
+              <div class="chart-bar absolute h-full ${barColor} rounded-lg flex items-center px-3" style="width: ${barWidth}%; min-width: ${pnl.value !== 0 ? '40px' : '0'}">
+                <span class="text-xs font-semibold text-white whitespace-nowrap">
+                  ${isPositive ? '+' : ''}$${Math.abs(pnl.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Modal functionality
+    const modal = document.getElementById('modal');
+    const addPositionBtn = document.getElementById('addPositionBtn');
+    const closeModal = document.getElementById('closeModal');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const positionForm = document.getElementById('positionForm');
+
+    function openModal() {
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModalFn() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      positionForm.reset();
+    }
+
+    addPositionBtn.addEventListener('click', openModal);
+    closeModal.addEventListener('click', closeModalFn);
+    cancelBtn.addEventListener('click', closeModalFn);
+    modalBackdrop.addEventListener('click', closeModalFn);
+
+    // Handle form submission
+    positionForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(positionForm);
+      const newPosition = {
+        asset: formData.get('asset').toUpperCase(),
+        company: formData.get('company'),
+        quantity: parseFloat(formData.get('quantity')),
+        avgCost: parseFloat(formData.get('avgCost')),
+        currentValue: parseFloat(formData.get('currentValue')),
+        sector: 'Otro'
+      };
+
+      // Add to data array
+      portfolioData.push(newPosition);
+
+      // Add to table
+      const tbody = document.getElementById('positionsBody');
+      const pnl = calculatePnL(newPosition.avgCost, newPosition.currentValue, newPosition.quantity);
+      const isPositive = pnl.value >= 0;
+      
+      const newRow = document.createElement('tr');
+      newRow.className = 'table-row';
+      newRow.innerHTML = `
+        <td class="px-6 py-4" data-label="Activo">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[#1F3864] to-[#C5961A] flex items-center justify-center text-white font-bold text-xs">${newPosition.asset}</div>
+            <div>
+              <p class="font-semibold text-slate-900">${newPosition.company}</p>
+              <p class="text-xs text-slate-500">${newPosition.sector}</p>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 text-right font-medium text-slate-900" data-label="Cantidad">${newPosition.quantity}</td>
+        <td class="px-6 py-4 text-right text-slate-600" data-label="Costo Promedio">$${newPosition.avgCost.toFixed(2)}</td>
+        <td class="px-6 py-4 text-right font-semibold text-slate-900" data-label="Valor Actual">$${newPosition.currentValue.toFixed(2)}</td>
+        <td class="px-6 py-4 text-right" data-label="P&L">
+          <span class="inline-flex items-center gap-1 font-semibold ${isPositive ? 'text-emerald-600' : 'text-red-600'}">
+            ${isPositive ? '+' : ''}$${pnl.value.toFixed(2)}
+            <span class="text-xs">(${isPositive ? '+' : ''}${pnl.percent.toFixed(1)}%)</span>
+          </span>
+        </td>
+        <td class="px-6 py-4 text-center" data-label="Acciones">
+          <button class="text-slate-400 hover:text-[#1F3864] transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 5a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+            </svg>
+          </button>
+        </td>
+      `;
+      
+      tbody.appendChild(newRow);
+      renderPerformanceChart();
+      closeModalFn();
+    });
+
+    // Initialize chart on load
+    document.addEventListener('DOMContentLoaded', () => {
+      renderPerformanceChart();
+    });
+
+    // Keyboard accessibility
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeModalFn();
+      }
+    });
+  </script>
+<script>(function(){document.addEventListener("click",function(e){var a=e.target.closest("[data-product-id]");if(!a)return;e.preventDefault();var pid=a.getAttribute("data-product-id");if(pid)parent.postMessage({type:"ecto-artifact-link-click",productId:pid},"*")})})();</script>
+</body>
+</html>
