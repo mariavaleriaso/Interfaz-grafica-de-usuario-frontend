@@ -1,0 +1,388 @@
+
+<h2 class="sr-only">Dashboard SPBI — Sistema de Predicción Bursátil Inteligente con gráfico de velas AAPL, indicadores técnicos SMA/EMA y panel de datos en tiempo real</h2>
+
+<style>
+  .spbi-wrap{font-family:var(--font-sans);padding:0.5rem 0;color:var(--color-text-primary)}
+  .tab-bar{display:flex;gap:4px;margin-bottom:1rem;border-bottom:0.5px solid var(--color-border-tertiary);padding-bottom:0}
+  .tab{padding:6px 16px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--color-text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:400}
+  .tab.active{color:var(--color-text-primary);border-bottom:2px solid #378ADD;font-weight:500}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:1rem}
+  .controls select{font-size:13px;padding:4px 8px;height:32px;min-width:90px}
+  .ctrl-label{font-size:12px;color:var(--color-text-secondary);margin-right:2px}
+  .ind-btn{font-size:12px;padding:3px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);cursor:pointer;background:transparent;color:var(--color-text-secondary)}
+  .ind-btn.on{background:var(--color-background-info);color:var(--color-text-info);border-color:var(--color-border-info)}
+  .main-layout{display:grid;grid-template-columns:1fr 220px;gap:12px}
+  .chart-col{min-width:0}
+  .side-panel{display:flex;flex-direction:column;gap:10px}
+  .kpi-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
+  .kpi-label{font-size:11px;color:var(--color-text-secondary);margin:0 0 2px}
+  .kpi-val{font-size:20px;font-weight:500;margin:0;line-height:1.2}
+  .kpi-change{font-size:12px;margin-top:2px}
+  .kpi-change.up{color:#1D9E75}
+  .kpi-change.down{color:#E24B4A}
+  .rt-table{width:100%;border-collapse:collapse;font-size:12px}
+  .rt-table td{padding:5px 4px;border-bottom:0.5px solid var(--color-border-tertiary)}
+  .rt-table td:last-child{text-align:right;font-weight:500}
+  .section-title{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px}
+  .signal-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:var(--border-radius-md);font-weight:500}
+  .sig-buy{background:#EAF3DE;color:#3B6D11}
+  .sig-sell{background:#FCEBEB;color:#A32D2D}
+  .sig-hold{background:#FAEEDA;color:#854F0B}
+  .chart-container{position:relative;width:100%}
+  .legend-row{display:flex;gap:14px;margin-bottom:6px;flex-wrap:wrap}
+  .leg-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)}
+  .leg-dot{width:24px;height:3px;border-radius:2px}
+</style>
+
+<div class="spbi-wrap">
+
+  <div class="tab-bar">
+    <button class="tab active" id="tab-acciones" onclick="switchTab('acciones')">
+      <i class="ti ti-chart-candle" aria-hidden="true"></i> Acciones
+    </button>
+    <button class="tab" id="tab-crypto" onclick="switchTab('crypto')">
+      <i class="ti ti-currency-bitcoin" aria-hidden="true"></i> Criptomonedas
+    </button>
+  </div>
+
+  <div class="controls">
+    <span class="ctrl-label">Ticker</span>
+    <select id="ticker-sel" onchange="updateChart()">
+      <option value="AAPL">AAPL</option>
+      <option value="MSFT">MSFT</option>
+      <option value="GOOGL">GOOGL</option>
+      <option value="TSLA">TSLA</option>
+    </select>
+    <span class="ctrl-label" style="margin-left:8px">Período</span>
+    <select id="period-sel" onchange="updateChart()">
+      <option value="30">30 días</option>
+      <option value="60">60 días</option>
+      <option value="90" selected>90 días</option>
+    </select>
+    <span class="ctrl-label" style="margin-left:8px">Indicadores</span>
+    <button class="ind-btn on" id="btn-sma" onclick="toggleInd('sma')">SMA 20</button>
+    <button class="ind-btn on" id="btn-ema" onclick="toggleInd('ema')">EMA 9</button>
+  </div>
+
+  <div class="main-layout">
+    <div class="chart-col">
+      <div class="legend-row" id="legend-row">
+        <span class="leg-item"><span class="leg-dot" style="background:#1D9E75"></span>Alcista</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#E24B4A"></span>Bajista</span>
+        <span class="leg-item" id="leg-sma"><span class="leg-dot" style="background:#378ADD"></span>SMA 20</span>
+        <span class="leg-item" id="leg-ema"><span class="leg-dot" style="background:#EF9F27"></span>EMA 9</span>
+      </div>
+      <div class="chart-container" style="height:340px">
+        <canvas id="candleChart" role="img" aria-label="Gráfico de velas japonesas AAPL con 90 días de datos simulados, indicadores SMA 20 y EMA 9">Datos OHLCV simulados para AAPL</canvas>
+      </div>
+      <div class="chart-container" style="height:100px;margin-top:4px">
+        <canvas id="volChart" role="img" aria-label="Sub-gráfico de volumen de operaciones diarias AAPL">Volumen de operaciones AAPL</canvas>
+      </div>
+    </div>
+
+    <div class="side-panel">
+      <div class="kpi-card">
+        <p class="kpi-label">Precio actual</p>
+        <p class="kpi-val" id="kpi-price">$214.38</p>
+        <p class="kpi-change up" id="kpi-chg">▲ +2.14 (1.01%)</p>
+      </div>
+      <div class="kpi-card">
+        <p class="section-title">Datos en tiempo real</p>
+        <table class="rt-table">
+          <tr><td style="color:var(--color-text-secondary)">Apertura</td><td id="td-open">$212.50</td></tr>
+          <tr><td style="color:var(--color-text-secondary)">Máximo</td><td id="td-high">$215.90</td></tr>
+          <tr><td style="color:var(--color-text-secondary)">Mínimo</td><td id="td-low">$211.30</td></tr>
+          <tr><td style="color:var(--color-text-secondary)">Cierre adj.</td><td id="td-close">$214.38</td></tr>
+          <tr><td style="color:var(--color-text-secondary)">Volumen</td><td id="td-vol">58.4M</td></tr>
+          <tr><td style="color:var(--color-text-secondary)">SMA 20</td><td id="td-sma">$210.12</td></tr>
+          <tr><td style="color:var(--color-text-secondary)">EMA 9</td><td id="td-ema">$213.05</td></tr>
+        </table>
+      </div>
+      <div class="kpi-card">
+        <p class="section-title">Señal IA (LSTM)</p>
+        <span class="signal-badge sig-buy" id="signal-badge">BUY</span>
+        <p style="font-size:12px;color:var(--color-text-secondary);margin:6px 0 0">Confianza: <strong id="conf-val">82%</strong></p>
+        <p style="font-size:11px;color:var(--color-text-secondary);margin:4px 0 0" id="signal-note">Tendencia alcista detectada. SMA cruza EMA al alza.</p>
+      </div>
+      <div class="kpi-card">
+        <p class="section-title">Sentimiento NLP</p>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--color-border-tertiary);overflow:hidden">
+            <div id="sent-bar" style="height:100%;width:72%;background:#1D9E75;border-radius:3px"></div>
+          </div>
+          <span style="font-size:12px;font-weight:500;color:#1D9E75" id="sent-val">72% positivo</span>
+        </div>
+        <p style="font-size:11px;color:var(--color-text-secondary);margin:5px 0 0" id="sent-src">Fuente: 5 noticias analizadas · LLM GPT-4o</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+/* ─── Generación de datos OHLCV simulados ─── */
+function genOHLCV(days, startPrice, volatility) {
+  const data = [];
+  let price = startPrice;
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    if (d.getDay() === 0 || d.getDay() === 6) continue;
+    const chg = (Math.random() - 0.48) * volatility;
+    const open = price;
+    const close = Math.max(open + chg, 10);
+    const high = Math.max(open, close) + Math.random() * volatility * 0.5;
+    const low  = Math.min(open, close) - Math.random() * volatility * 0.5;
+    const vol  = Math.round((Math.random() * 40 + 30) * 1e6);
+    data.push({ date: d.toLocaleDateString('es-PE', {day:'2-digit',month:'short'}), open: +open.toFixed(2), high: +high.toFixed(2), low: +low.toFixed(2), close: +close.toFixed(2), vol });
+    price = close;
+  }
+  return data;
+}
+
+/* ─── SMA y EMA ─── */
+function calcSMA(closes, n) {
+  return closes.map((_, i) => i < n - 1 ? null : +(closes.slice(i - n + 1, i + 1).reduce((a, b) => a + b) / n).toFixed(2));
+}
+function calcEMA(closes, n) {
+  const k = 2 / (n + 1), res = [];
+  let ema = closes[0];
+  closes.forEach((c, i) => {
+    if (i === 0) { res.push(+ema.toFixed(2)); return; }
+    ema = c * k + ema * (1 - k);
+    res.push(i < n - 1 ? null : +ema.toFixed(2));
+  });
+  return res;
+}
+
+/* ─── Config por ticker ─── */
+const TICKERS = {
+  AAPL: { price: 212, vol: 5.0, conf: 82, signal: 'BUY', sent: 72, sentClr: '#1D9E75', note: 'Tendencia alcista. SMA cruza EMA al alza.' },
+  MSFT: { price: 415, vol: 4.0, conf: 71, signal: 'HOLD', sent: 58, sentClr: '#BA7517', note: 'Consolidación. Sin señal clara de ruptura.' },
+  GOOGL: { price: 178, vol: 3.5, conf: 66, signal: 'BUY', sent: 65, sentClr: '#1D9E75', note: 'Momentum positivo en tecnología.' },
+  TSLA: { price: 172, vol: 9.0, conf: 55, signal: 'SELL', sent: 38, sentClr: '#E24B4A', note: 'Volatilidad alta. Señal bajista del ensamblado.' }
+};
+
+const CRYPTO = {
+  BTC: { price: 67800, vol: 14.0, conf: 74, signal: 'BUY', sent: 70, sentClr: '#1D9E75', note: 'Ciclo alcista. Halving reciente.' },
+  ETH: { price: 3540, vol: 9.0, conf: 68, signal: 'HOLD', sent: 55, sentClr: '#BA7517', note: 'Soporte clave en zona de acumulación.' },
+  BNB:  { price: 590, vol: 6.0, conf: 60, signal: 'SELL', sent: 42, sentClr: '#E24B4A', note: 'Presión de venta sobre resistencia.' }
+};
+
+let currentTab = 'acciones';
+let showSMA = true, showEMA = true;
+let candleChart, volChart;
+
+function getTickerList() {
+  return currentTab === 'acciones' ? Object.keys(TICKERS) : Object.keys(CRYPTO);
+}
+function getConf() {
+  return currentTab === 'acciones' ? TICKERS : CRYPTO;
+}
+
+/* ─── Render gráficos ─── */
+function buildChart() {
+  const sel = document.getElementById('ticker-sel').value;
+  const days = parseInt(document.getElementById('period-sel').value);
+  const cfg = getConf()[sel];
+  const raw = genOHLCV(days, cfg.price, cfg.vol);
+
+  const labels = raw.map(r => r.date);
+  const closes = raw.map(r => r.close);
+  const sma = calcSMA(closes, 20);
+  const ema = calcEMA(closes, 9);
+  const vols = raw.map(r => r.vol);
+
+  /* Candlestick simulado con barras flotantes */
+  const upClr = '#1D9E75', dnClr = '#E24B4A';
+  const barColors = raw.map(r => r.close >= r.open ? upClr : dnClr);
+  const opens = raw.map(r => r.open);
+  const highs = raw.map(r => r.high);
+  const lows  = raw.map(r => r.low);
+
+  const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridClr = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+  const lblClr  = isDark ? '#888' : '#999';
+  const tickClr = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)';
+
+  /* Destruir gráficos anteriores */
+  if (candleChart) candleChart.destroy();
+  if (volChart)    volChart.destroy();
+
+  const ctxC = document.getElementById('candleChart').getContext('2d');
+  candleChart = new Chart(ctxC, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Rango (High-Low)',
+          data: raw.map(r => [r.low, r.high]),
+          backgroundColor: barColors.map(c => c + '44'),
+          borderColor: barColors,
+          borderWidth: 1,
+          barPercentage: 0.3,
+          categoryPercentage: 1,
+          order: 2
+        },
+        {
+          label: 'Cuerpo (Open-Close)',
+          data: raw.map(r => [Math.min(r.open, r.close), Math.max(r.open, r.close)]),
+          backgroundColor: barColors,
+          borderColor: barColors,
+          borderWidth: 1,
+          barPercentage: 0.6,
+          categoryPercentage: 1,
+          order: 1
+        },
+        {
+          label: 'SMA 20',
+          data: showSMA ? sma : [],
+          type: 'line',
+          borderColor: '#378ADD',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.3,
+          borderDash: [],
+          fill: false,
+          order: 0
+        },
+        {
+          label: 'EMA 9',
+          data: showEMA ? ema : [],
+          type: 'line',
+          borderColor: '#EF9F27',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false,
+          order: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => labels[items[0].dataIndex],
+            label: (item) => {
+              const r = raw[item.dataIndex];
+              if (!r) return '';
+              return `A: $${r.open.toFixed(2)}  M: $${r.high.toFixed(2)}  m: $${r.low.toFixed(2)}  C: $${r.close.toFixed(2)}`;
+            }
+          },
+          filter: (item) => item.datasetIndex === 1
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: lblClr, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+          grid: { color: gridClr },
+          border: { color: tickClr }
+        },
+        y: {
+          position: 'right',
+          ticks: { color: lblClr, font: { size: 10 }, callback: v => '$' + v.toFixed(0) },
+          grid: { color: gridClr },
+          border: { color: tickClr }
+        }
+      }
+    }
+  });
+
+  /* Sub-gráfico volumen */
+  const ctxV = document.getElementById('volChart').getContext('2d');
+  volChart = new Chart(ctxV, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Volumen',
+        data: vols,
+        backgroundColor: barColors.map(c => c + '88'),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: (i) => 'Vol: ' + (i.raw / 1e6).toFixed(1) + 'M' }
+      }},
+      scales: {
+        x: { ticks: { display: false }, grid: { display: false }, border: { color: tickClr } },
+        y: { position: 'right', ticks: { color: lblClr, font: { size: 9 }, callback: v => (v/1e6).toFixed(0)+'M', maxTicksLimit: 3 }, grid: { color: gridClr }, border: { color: tickClr } }
+      }
+    }
+  });
+
+  /* ─── Panel lateral ─── */
+  const last = raw[raw.length - 1];
+  const prev = raw[raw.length - 2];
+  const chg = last.close - prev.close;
+  const pct = (chg / prev.close * 100);
+  const isUp = chg >= 0;
+
+  document.getElementById('kpi-price').textContent = '$' + last.close.toFixed(2);
+  document.getElementById('kpi-chg').textContent = (isUp ? '▲ +' : '▼ ') + chg.toFixed(2) + ' (' + pct.toFixed(2) + '%)';
+  document.getElementById('kpi-chg').className = 'kpi-change ' + (isUp ? 'up' : 'down');
+
+  document.getElementById('td-open').textContent  = '$' + last.open.toFixed(2);
+  document.getElementById('td-high').textContent  = '$' + last.high.toFixed(2);
+  document.getElementById('td-low').textContent   = '$' + last.low.toFixed(2);
+  document.getElementById('td-close').textContent = '$' + last.close.toFixed(2);
+  document.getElementById('td-vol').textContent   = (last.vol / 1e6).toFixed(1) + 'M';
+
+  const lastSMA = sma.filter(v => v !== null).slice(-1)[0] || 0;
+  const lastEMA = ema.filter(v => v !== null).slice(-1)[0] || 0;
+  document.getElementById('td-sma').textContent = '$' + lastSMA.toFixed(2);
+  document.getElementById('td-ema').textContent = '$' + lastEMA.toFixed(2);
+
+  const sigMap = { BUY: 'sig-buy', SELL: 'sig-sell', HOLD: 'sig-hold' };
+  const badge = document.getElementById('signal-badge');
+  badge.textContent = cfg.signal;
+  badge.className = 'signal-badge ' + sigMap[cfg.signal];
+  document.getElementById('conf-val').textContent = cfg.conf + '%';
+  document.getElementById('signal-note').textContent = cfg.note;
+
+  document.getElementById('sent-bar').style.width = cfg.sent + '%';
+  document.getElementById('sent-bar').style.background = cfg.sentClr;
+  document.getElementById('sent-val').style.color = cfg.sentClr;
+  document.getElementById('sent-val').textContent = cfg.sent + '% positivo';
+}
+
+/* ─── Cambio de pestaña ─── */
+function switchTab(tab) {
+  currentTab = tab;
+  ['acciones','crypto'].forEach(t => document.getElementById('tab-' + t).classList.toggle('active', t === tab));
+  const sel = document.getElementById('ticker-sel');
+  sel.innerHTML = getTickerList().map(t => `<option value="${t}">${t}</option>`).join('');
+  buildChart();
+}
+
+/* ─── Actualizar al cambiar ticker/período ─── */
+function updateChart() { buildChart(); }
+
+/* ─── Toggle indicadores ─── */
+function toggleInd(ind) {
+  if (ind === 'sma') {
+    showSMA = !showSMA;
+    document.getElementById('btn-sma').classList.toggle('on', showSMA);
+    document.getElementById('leg-sma').style.opacity = showSMA ? '1' : '0.3';
+  } else {
+    showEMA = !showEMA;
+    document.getElementById('btn-ema').classList.toggle('on', showEMA);
+    document.getElementById('leg-ema').style.opacity = showEMA ? '1' : '0.3';
+  }
+  buildChart();
+}
+
+buildChart();
+</script>

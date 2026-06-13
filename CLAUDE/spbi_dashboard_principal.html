@@ -1,0 +1,411 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.spbi-dash{background:var(--color-background-tertiary);padding:0;width:100%}
+.topbar{background:#1F3864;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;border-radius:var(--border-radius-lg) var(--border-radius-lg) 0 0}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-brand{font-size:15px;font-weight:500;letter-spacing:.5px}
+.topbar-ticker{background:rgba(255,255,255,.12);border-radius:6px;padding:4px 12px;font-size:13px;display:flex;align-items:center;gap:6px}
+.ticker-sym{font-weight:500;font-size:14px}
+.ticker-price{color:#FAC775}
+.ticker-chg{color:#9FE1CB;font-size:12px}
+.topbar-nav{display:flex;gap:2px}
+.nav-btn{background:transparent;border:none;color:rgba(255,255,255,.7);font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;font-family:var(--font-sans)}
+.nav-btn.active,.nav-btn:hover{background:rgba(255,255,255,.15);color:#fff}
+.topbar-right{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.7)}
+.dot-green{width:7px;height:7px;border-radius:50%;background:#5DCAA5;display:inline-block}
+.dot-red{width:7px;height:7px;border-radius:50%;background:#F09595;display:inline-block}
+
+.main-grid{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:10px;padding:10px;align-items:start}
+.left-col{display:flex;flex-direction:column;gap:10px}
+.right-col{display:flex;flex-direction:column;gap:10px}
+
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kpi-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px 12px}
+.kpi-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.kpi-val{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.kpi-sub{font-size:11px;margin-top:2px}
+.kpi-up{color:#1D9E75}
+.kpi-dn{color:#A32D2D}
+
+.panel{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden}
+.panel-hdr{padding:8px 14px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:12px;font-weight:500;color:#1F3864;text-transform:uppercase;letter-spacing:.5px}
+.panel-tools{display:flex;gap:4px}
+.ptool{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:4px;font-size:11px;padding:2px 8px;cursor:pointer;color:var(--color-text-secondary);font-family:var(--font-sans)}
+.ptool.active,.ptool:hover{background:#1F3864;color:#fff;border-color:#1F3864}
+.chart-area{padding:8px 6px 4px}
+
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:0 10px 10px}
+
+.model-list{padding:10px 12px}
+.model-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.model-row:last-child{border-bottom:none}
+.model-cb{accent-color:#1F3864;width:13px;height:13px}
+.model-name{font-size:12px;color:var(--color-text-primary);flex:1}
+.sig-badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px}
+.sig-buy{background:#EAF3DE;color:#3B6D11}
+.sig-sell{background:#FCEBEB;color:#A32D2D}
+.sig-hold{background:#FAEEDA;color:#854F0B}
+.model-conf{font-size:10px;color:var(--color-text-secondary);min-width:30px;text-align:right}
+
+.semaforo-block{padding:10px 12px}
+.sem-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px}
+.sem-main{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.sem-circle{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500}
+.sem-buy{background:#EAF3DE;color:#3B6D11;border:2px solid #639922}
+.sem-info{flex:1}
+.sem-signal{font-size:16px;font-weight:500;color:var(--color-text-primary)}
+.sem-conf-bar-wrap{margin-top:6px}
+.sem-conf-bar-bg{background:var(--color-background-secondary);border-radius:4px;height:6px;width:100%}
+.sem-conf-bar-fill{background:#1D9E75;border-radius:4px;height:6px}
+.sem-agree{font-size:11px;color:var(--color-text-secondary);margin-top:3px}
+
+.metrics-table{width:100%;border-collapse:collapse;font-size:11px;margin:0}
+.metrics-table td{padding:4px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary)}
+.metrics-table td:first-child{color:var(--color-text-secondary)}
+.metrics-table td:last-child{text-align:right;font-weight:500}
+.metrics-table tr:last-child td{border-bottom:none}
+.val-green{color:#1D9E75}
+.val-red{color:#A32D2D}
+.val-gold{color:#C5961A}
+
+.bottom-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 10px 4px}
+.bkpi{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:7px 10px}
+.bkpi-lbl{font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.bkpi-val{font-size:14px;font-weight:500}
+</style>
+
+<div class="spbi-dash">
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-brand"><i class="ti ti-chart-candle" aria-hidden="true"></i> SPBI — Sistema de Predicción Bursátil</div>
+    <div class="topbar-ticker">
+      <span class="ticker-sym">AAPL</span>
+      <span class="ticker-price">$207.82</span>
+      <span class="ticker-chg">▲ +1.24%</span>
+    </div>
+    <div class="topbar-nav">
+      <button class="nav-btn active">Dashboard</button>
+      <button class="nav-btn">Modelos</button>
+      <button class="nav-btn">Estrategias</button>
+      <button class="nav-btn">Backtesting</button>
+      <button class="nav-btn">Pronósticos</button>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span><span class="dot-green"></span> Yahoo Finance</span>
+    <span><span class="dot-green"></span> PostgreSQL</span>
+    <span><span class="dot-red"></span> IB TWS</span>
+    <span style="color:#FAC775;font-size:11px">Sem. 5 — Sprint 1</span>
+  </div>
+</div>
+
+<div class="main-grid">
+
+  <div class="left-col">
+
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Precio actual</div>
+        <div class="kpi-val">$207.82</div>
+        <div class="kpi-sub kpi-up">▲ +$2.54 hoy</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Señal LSTM (30d)</div>
+        <div class="kpi-val" style="color:#1D9E75">BUY</div>
+        <div class="kpi-sub" style="color:var(--color-text-secondary)">Conf. 83%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">RMSE modelo</div>
+        <div class="kpi-val">3.53%</div>
+        <div class="kpi-sub kpi-up">R² = 0.918</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Sharpe ratio</div>
+        <div class="kpi-val" style="color:#C5961A">1.87</div>
+        <div class="kpi-sub" style="color:var(--color-text-secondary)">Backtest 5a</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="panel-title"><i class="ti ti-chart-candle" aria-hidden="true" style="font-size:13px"></i> Candlestick — AAPL + Predicción LSTM</span>
+        <div class="panel-tools">
+          <button class="ptool active">1M</button>
+          <button class="ptool">3M</button>
+          <button class="ptool">1A</button>
+          <button class="ptool">5A</button>
+        </div>
+      </div>
+      <div class="chart-area">
+        <div style="position:relative;width:100%;height:280px">
+          <canvas id="canvasMain" role="img" aria-label="Gráfico candlestick de AAPL con predicción LSTM superpuesta y marcadores BUY/SELL">Datos OHLCV de AAPL con predicciones del modelo LSTM Regressor y señales de compra y venta.</canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="right-col">
+
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="panel-title"><i class="ti ti-cpu" aria-hidden="true" style="font-size:13px"></i> Modelos activos</span>
+      </div>
+      <div class="model-list">
+        <div class="model-row"><input type="checkbox" class="model-cb" checked> <span class="model-name">LSTM Regressor</span> <span class="sig-badge sig-buy">BUY</span> <span class="model-conf">83%</span></div>
+        <div class="model-row"><input type="checkbox" class="model-cb" checked> <span class="model-name">XGBoost Clf.</span> <span class="sig-badge sig-buy">BUY</span> <span class="model-conf">78%</span></div>
+        <div class="model-row"><input type="checkbox" class="model-cb" checked> <span class="model-name">BiLSTM Clf.</span> <span class="sig-badge sig-buy">BUY</span> <span class="model-conf">74%</span></div>
+        <div class="model-row"><input type="checkbox" class="model-cb" checked> <span class="model-name">Random Forest</span> <span class="sig-badge sig-hold">HOLD</span> <span class="model-conf">61%</span></div>
+        <div class="model-row"><input type="checkbox" class="model-cb" checked> <span class="model-name">GRU Classifier</span> <span class="sig-badge sig-buy">BUY</span> <span class="model-conf">70%</span></div>
+        <div class="model-row"><input type="checkbox" class="model-cb"> <span class="model-name">LLM OpenAI</span> <span class="sig-badge sig-buy">BUY</span> <span class="model-conf">—</span></div>
+        <div class="model-row"><input type="checkbox" class="model-cb"> <span class="model-name">NLP Sentimiento</span> <span class="sig-badge sig-hold">HOLD</span> <span class="model-conf">—</span></div>
+        <div class="model-row"><input type="checkbox" class="model-cb" checked> <span class="model-name">ARIMA-LSTM</span> <span class="sig-badge sig-buy">BUY</span> <span class="model-conf">79%</span></div>
+        <div class="model-row"><input type="checkbox" class="model-cb" checked> <span class="model-name">SVC Kernel RBF</span> <span class="sig-badge sig-sell">SELL</span> <span class="model-conf">55%</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="panel-title"><i class="ti ti-traffic-lights" aria-hidden="true" style="font-size:13px"></i> Señal consolidada</span>
+      </div>
+      <div class="semaforo-block">
+        <div class="sem-label">Ensamblado (RF-20) — votación ponderada</div>
+        <div class="sem-main">
+          <div class="sem-circle sem-buy">BUY</div>
+          <div class="sem-info">
+            <div class="sem-signal">COMPRAR</div>
+            <div class="sem-conf-bar-wrap">
+              <div class="sem-conf-bar-bg"><div class="sem-conf-bar-fill" style="width:76%"></div></div>
+              <div class="sem-agree">Acuerdo: 7/9 modelos · Confianza 76%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <table class="metrics-table">
+        <tr><td>RMSE%</td><td class="val-green">3.53%</td></tr>
+        <tr><td>MAE%</td><td class="val-green">2.86%</td></tr>
+        <tr><td>R²</td><td class="val-green">0.918</td></tr>
+        <tr><td>MAPE</td><td class="val-green">2.79%</td></tr>
+        <tr><td>Inferencia</td><td class="val-gold">2.1 ms/pred</td></tr>
+        <tr><td>F1-Score</td><td class="val-green">0.72</td></tr>
+        <tr><td>AUC-ROC</td><td class="val-green">0.68</td></tr>
+        <tr><td>Stop-loss (ATR)</td><td style="color:#800000">$201.40</td></tr>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<div class="bottom-grid">
+
+  <div class="panel" style="grid-column:1 / 2">
+    <div class="panel-hdr">
+      <span class="panel-title"><i class="ti ti-trending-up" aria-hidden="true" style="font-size:13px"></i> Equity curve — Backtest 5 años</span>
+      <div class="panel-tools"><button class="ptool active">LSTM</button><button class="ptool">RFC</button><button class="ptool">Ensamblado</button></div>
+    </div>
+    <div style="position:relative;width:100%;height:180px;padding:6px 6px 4px">
+      <canvas id="canvasEquity" role="img" aria-label="Curva de equity del backtesting a 5 años de AAPL">Curva de equity comparando la estrategia LSTM contra el benchmark buy-and-hold de AAPL.</canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hdr">
+      <span class="panel-title"><i class="ti ti-chart-histogram" aria-hidden="true" style="font-size:13px"></i> Distribución de retornos</span>
+    </div>
+    <div style="position:relative;width:100%;height:180px;padding:6px 6px 4px">
+      <canvas id="canvasHist" role="img" aria-label="Histograma de distribución de retornos diarios de AAPL">Histograma de retornos diarios durante el período de backtesting.</canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hdr">
+      <span class="panel-title"><i class="ti ti-report-analytics" aria-hidden="true" style="font-size:13px"></i> Métricas portafolio</span>
+    </div>
+    <div class="bottom-kpi-row">
+      <div class="bkpi"><div class="bkpi-lbl">Retorno total</div><div class="bkpi-val kpi-up">+184%</div></div>
+      <div class="bkpi"><div class="bkpi-lbl">CAGR</div><div class="bkpi-val" style="color:#C5961A">23.4%</div></div>
+      <div class="bkpi"><div class="bkpi-lbl">Max. DD</div><div class="bkpi-val kpi-dn">-18.2%</div></div>
+    </div>
+    <table class="metrics-table" style="margin:0 0 4px">
+      <tr><td>Sharpe ratio</td><td class="val-gold">1.87</td></tr>
+      <tr><td>Sortino ratio</td><td class="val-gold">2.31</td></tr>
+      <tr><td>Calmar ratio</td><td class="val-gold">1.29</td></tr>
+      <tr><td>Win rate</td><td class="val-green">64.3%</td></tr>
+      <tr><td>Profit factor</td><td class="val-green">1.74</td></tr>
+      <tr><td>N.º operaciones</td><td>218</td></tr>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const dates = [];
+const basePrice = 150;
+const ohlcData = [];
+const predLine = [];
+const buySignals = [];
+const sellSignals = [];
+
+for(let i=0;i<60;i++){
+  const d = new Date(2024,0,2);
+  d.setDate(d.getDate()+i*1.4);
+  dates.push(d.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}));
+  const trend = i*0.9;
+  const noise = (Math.random()-.45)*6;
+  const open = basePrice + trend + noise;
+  const close = open + (Math.random()-.4)*5;
+  const high = Math.max(open,close)+(Math.random()*3);
+  const low = Math.min(open,close)-(Math.random()*3);
+  ohlcData.push({o:+open.toFixed(2),h:+high.toFixed(2),l:+low.toFixed(2),c:+close.toFixed(2)});
+  const predVal = close + (Math.random()-.35)*4 + 0.6;
+  predLine.push(+predVal.toFixed(2));
+  if(i===12||i===28||i===44) buySignals.push({x:i,y:+low.toFixed(2)-2});
+  else buySignals.push(null);
+  if(i===20||i===38) sellSignals.push({x:i,y:+high.toFixed(2)+2});
+  else sellSignals.push(null);
+}
+
+const closeVals = ohlcData.map(d=>d.c);
+const greenFills = ohlcData.map(d=>d.c>=d.o?'rgba(29,158,117,0.75)':'rgba(163,45,45,0.75)');
+const greenBorders = ohlcData.map(d=>d.c>=d.o?'#0F6E56':'#791F1F');
+
+new Chart(document.getElementById('canvasMain'),{
+  type:'bar',
+  data:{
+    labels:dates,
+    datasets:[
+      {
+        type:'bar',label:'OHLCV',
+        data:ohlcData.map(d=>d.c),
+        backgroundColor:greenFills,
+        borderColor:greenBorders,
+        borderWidth:1,
+        barPercentage:0.6
+      },
+      {
+        type:'line',label:'Predicción LSTM',
+        data:predLine,
+        borderColor:'#C5961A',
+        borderWidth:1.5,
+        borderDash:[4,2],
+        pointRadius:0,
+        tension:0.3,
+        fill:false
+      },
+      {
+        type:'scatter',label:'BUY',
+        data:buySignals.map((v,i)=>v?{x:i,y:v}:null).filter(Boolean),
+        backgroundColor:'#1D9E75',
+        borderColor:'#0F6E56',
+        pointStyle:'triangle',
+        pointRadius:7,
+        borderWidth:1
+      },
+      {
+        type:'scatter',label:'SELL',
+        data:sellSignals.map((v,i)=>v?{x:i,y:v}:null).filter(Boolean),
+        backgroundColor:'#A32D2D',
+        borderColor:'#791F1F',
+        pointStyle:'triangle',
+        rotation:180,
+        pointRadius:7,
+        borderWidth:1
+      }
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        callbacks:{
+          label:ctx=>{
+            if(ctx.dataset.label==='OHLCV'){
+              const d=ohlcData[ctx.dataIndex];
+              return `O:${d.o} H:${d.h} L:${d.l} C:${d.c}`;
+            }
+            return `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`;
+          }
+        }
+      }
+    },
+    scales:{
+      x:{ticks:{font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{display:false}},
+      y:{ticks:{font:{size:10},callback:v=>'$'+v.toFixed(0)},grid:{color:'rgba(128,128,128,0.1)'}}
+    }
+  }
+});
+
+const eqLabels=[];
+const strat=[];
+const bench=[];
+let sv=10000,bv=10000;
+for(let i=0;i<60;i++){
+  const d=new Date(2020,0,2);d.setDate(d.getDate()+i*30);
+  eqLabels.push(d.getFullYear()+"/"+(d.getMonth()+1).toString().padStart(2,'0'));
+  sv*=(1+(Math.random()*.04-.01));
+  bv*=(1+(Math.random()*.035-.008));
+  strat.push(+sv.toFixed(2));
+  bench.push(+bv.toFixed(2));
+}
+
+new Chart(document.getElementById('canvasEquity'),{
+  type:'line',
+  data:{
+    labels:eqLabels,
+    datasets:[
+      {label:'LSTM strategy',data:strat,borderColor:'#1F3864',backgroundColor:'rgba(31,56,100,0.07)',borderWidth:1.5,pointRadius:0,fill:true,tension:0.3},
+      {label:'Buy & Hold',data:bench,borderColor:'#C5961A',borderWidth:1,borderDash:[4,3],pointRadius:0,fill:false,tension:0.3}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${c.parsed.y.toFixed(0)}`}}},
+    scales:{
+      x:{ticks:{font:{size:9},maxTicksLimit:6,autoSkip:true},grid:{display:false}},
+      y:{ticks:{font:{size:9},callback:v=>'$'+Math.round(v/1000)+'k'},grid:{color:'rgba(128,128,128,0.1)'}}
+    }
+  }
+});
+
+const retBins=['<-3%','-3% a -2%','-2% a -1%','-1% a 0%','0% a 1%','1% a 2%','2% a 3%','>3%'];
+const retFreq=[8,14,22,31,35,24,12,6];
+const retColors=retFreq.map((_,i)=>i<3?'rgba(163,45,45,0.75)':i===3?'rgba(136,135,128,0.6)':'rgba(29,158,117,0.75)');
+
+new Chart(document.getElementById('canvasHist'),{
+  type:'bar',
+  data:{
+    labels:retBins,
+    datasets:[{label:'Frecuencia',data:retFreq,backgroundColor:retColors,borderWidth:0,borderRadius:2}]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ticks:{font:{size:9}},grid:{display:false}},
+      y:{ticks:{font:{size:9}},grid:{color:'rgba(128,128,128,0.1)'}}
+    }
+  }
+});
+
+document.querySelectorAll('.ptool').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    const grp=this.parentElement;
+    grp.querySelectorAll('.ptool').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>

@@ -1,0 +1,353 @@
+
+<h2 class="sr-only">Panel de clasificación de tendencias bursátiles con SVC: gráfico de señales de mercado, métricas de evaluación y matriz de confusión.</h2>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.panel{padding:1rem 0}
+.section-label{font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+.metric-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.85rem 1rem}
+.metric-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.metric-sub{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.chart-wrap{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:1.25rem}
+.row2{display:grid;grid-template-columns:1fr 260px;gap:1.25rem;margin-bottom:1.25rem}
+.conf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.cf-cell{background:var(--color-background-secondary);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;font-size:13px}
+.cf-val{font-size:18px;font-weight:500}
+.cf-lbl{font-size:10px;color:var(--color-text-secondary);margin-top:2px;text-align:center}
+.header-row{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
+.semaforo-panel{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem}
+.signal-circle{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px}
+.signal-text{font-size:18px;font-weight:500}
+.signal-conf{font-size:12px;color:var(--color-text-secondary)}
+.legend{display:flex;gap:16px;margin-bottom:.75rem;font-size:12px;color:var(--color-text-secondary)}
+.leg-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
+.axis-label{font-size:11px;fill:var(--color-text-secondary, #888)}
+.conf-axis-label{font-size:11px;color:var(--color-text-secondary);text-align:center}
+.conf-header{display:grid;grid-template-columns:32px repeat(3,1fr);gap:4px;margin-bottom:4px}
+.conf-side{display:grid;grid-template-rows:repeat(3,1fr);gap:4px;align-items:center}
+.cf-real{font-size:11px;color:var(--color-text-secondary);text-align:right;padding-right:4px}
+</style>
+
+<div class="panel">
+
+  <div class="header-row">
+    <i class="ti ti-chart-line" style="font-size:20px;color:var(--color-text-secondary)" aria-hidden="true"></i>
+    <span style="font-size:16px;font-weight:500;color:var(--color-text-primary)">SVC — clasificador de tendencias bursátiles</span>
+    <span style="font-size:12px;color:var(--color-text-secondary);margin-left:auto">kernel RBF · ventana 60 días · AAPL 2022–2024</span>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Accuracy</div>
+      <div class="metric-val" id="acc">—</div>
+      <div class="metric-sub">umbral ≥ 60 %</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">F1-Score (macro)</div>
+      <div class="metric-val" id="f1">—</div>
+      <div class="metric-sub">umbral ≥ 0.58</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Precisión (macro)</div>
+      <div class="metric-val" id="prec">—</div>
+      <div class="metric-sub">media de clases</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Recall (macro)</div>
+      <div class="metric-val" id="rec">—</div>
+      <div class="metric-sub">media de clases</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="legend">
+      <span><span class="leg-dot" style="background:#2d9e75"></span>BUY</span>
+      <span><span class="leg-dot" style="background:#e24b4a"></span>SELL</span>
+      <span><span class="leg-dot" style="background:#888780"></span>HOLD</span>
+      <span style="margin-left:auto;font-size:11px">▲ triángulos = señal del modelo · línea = precio normalizado</span>
+    </div>
+    <div style="position:relative;width:100%;height:220px">
+      <canvas id="lineChart" role="img" aria-label="Gráfico de precio normalizado con marcadores triangulares de señal BUY, SELL y HOLD generados por el modelo SVC.">Señales de clasificación SVC sobre precio normalizado de AAPL.</canvas>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="chart-wrap" style="margin-bottom:0">
+      <div class="section-label">Matriz de confusión</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:.5rem;text-align:center">Predicho →</div>
+      <div class="conf-header">
+        <div></div>
+        <div class="conf-axis-label" style="font-size:11px">BUY</div>
+        <div class="conf-axis-label" style="font-size:11px">HOLD</div>
+        <div class="conf-axis-label" style="font-size:11px">SELL</div>
+      </div>
+      <div style="display:grid;grid-template-columns:32px 1fr;gap:4px">
+        <div style="display:flex;flex-direction:column;justify-content:space-around;align-items:flex-end;gap:4px;padding-right:4px">
+          <span class="conf-axis-label" style="font-size:10px;writing-mode:horizontal-lr">BUY</span>
+          <span class="conf-axis-label" style="font-size:10px">HOLD</span>
+          <span class="conf-axis-label" style="font-size:10px">SELL</span>
+        </div>
+        <div class="conf-grid" id="confMatrix"></div>
+      </div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:.5rem;text-align:left">← Real</div>
+    </div>
+
+    <div class="semaforo-panel">
+      <div class="section-label" style="text-align:center">Señal actual</div>
+      <div class="signal-circle" id="sigCircle" style="background:#e8f7f1"></div>
+      <div class="signal-text" id="sigText">—</div>
+      <div class="signal-conf" id="sigConf">—</div>
+      <div style="width:100%;border-top:0.5px solid var(--color-border-tertiary);margin:.5rem 0"></div>
+      <div style="font-size:11px;color:var(--color-text-secondary);text-align:center">Último vector de características</div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);text-align:center" id="featureInfo">RSI: 58.2 · MACD: +0.34 · BB: 0.72</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+(function(){
+  const N = 120;
+  const rng = (s) => {
+    let x = Math.sin(s+1)*10000;
+    return x - Math.floor(x);
+  };
+
+  let price = 170;
+  const prices = [];
+  for(let i=0;i<N;i++){
+    price += (rng(i*7+1)-0.48)*2.5;
+    prices.push(+price.toFixed(2));
+  }
+  const pMin = Math.min(...prices), pMax = Math.max(...prices);
+  const norm = prices.map(p => +((p-pMin)/(pMax-pMin)).toFixed(3));
+
+  const signals = [];
+  for(let i=0;i<N;i++){
+    const trend = (i<N-1 ? prices[i+1] : prices[i]) - prices[i];
+    const r = rng(i*13+3);
+    let s;
+    if(trend > 1.0 && r > 0.25) s='BUY';
+    else if(trend < -1.0 && r > 0.25) s='SELL';
+    else s='HOLD';
+    if(r < 0.18){
+      const opts=['BUY','SELL','HOLD'];
+      s = opts[Math.floor(r*3*5.5)%3];
+    }
+    signals.push(s);
+  }
+
+  const labels = Array.from({length:N},(_,i)=>{
+    const d = new Date(2022,0,3);
+    d.setDate(d.getDate()+Math.round(i*1.95));
+    return d.toLocaleDateString('es-PE',{month:'short',day:'numeric'});
+  });
+
+  const skipEvery = 10;
+  const dispLabels = labels.map((l,i)=>i%skipEvery===0?l:'');
+
+  const colorOf = s => s==='BUY'?'#2d9e75':s==='SELL'?'#e24b4a':'#888780';
+  const buyPts = norm.map((v,i)=>signals[i]==='BUY'?{x:i,y:v}:null).filter(Boolean);
+  const sellPts = norm.map((v,i)=>signals[i]==='SELL'?{x:i,y:v}:null).filter(Boolean);
+  const holdPts = norm.map((v,i)=>signals[i]==='HOLD'?{x:i,y:v}:null).filter(Boolean);
+
+  const triUp = {
+    id:'triUp',
+    afterDatasetsDraw(chart){
+      const {ctx}=chart;
+      [[buyPts,'#2d9e75'],[sellPts,'#e24b4a'],[holdPts,'#888780']].forEach(([pts,col],gi)=>{
+        const ds = chart.getDatasetByIndex ? null : null;
+        pts.forEach(pt=>{
+          const meta = chart.getDatasetMeta(1+gi);
+          const el = meta.data.find(d=>d.$context&&d.$context.raw&&d.$context.raw.x===pt.x);
+          if(!el) return;
+          const {x,y} = el;
+          const flip = gi===1;
+          ctx.save();
+          ctx.fillStyle=col;
+          ctx.beginPath();
+          if(!flip){
+            ctx.moveTo(x,y-10);ctx.lineTo(x-6,y+2);ctx.lineTo(x+6,y+2);
+          } else {
+            ctx.moveTo(x,y+10);ctx.lineTo(x-6,y-2);ctx.lineTo(x+6,y-2);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        });
+      });
+    }
+  };
+
+  new Chart(document.getElementById('lineChart'),{
+    type:'line',
+    plugins:[triUp],
+    data:{
+      labels: Array.from({length:N},(_,i)=>i),
+      datasets:[
+        {
+          label:'Precio normalizado',
+          data:norm,
+          borderColor:'#378add',
+          borderWidth:1.5,
+          pointRadius:0,
+          fill:false,
+          tension:0.3,
+          order:10
+        },
+        {
+          label:'BUY',
+          data:buyPts.map(p=>({x:p.x,y:p.y})),
+          showLine:false,
+          pointRadius:0,
+          pointHoverRadius:0,
+          borderColor:'transparent',
+          backgroundColor:'transparent',
+          order:1
+        },
+        {
+          label:'SELL',
+          data:sellPts.map(p=>({x:p.x,y:p.y})),
+          showLine:false,
+          pointRadius:0,
+          pointHoverRadius:0,
+          borderColor:'transparent',
+          backgroundColor:'transparent',
+          order:2
+        },
+        {
+          label:'HOLD',
+          data:holdPts.map(p=>({x:p.x,y:p.y})),
+          showLine:false,
+          pointRadius:0,
+          pointHoverRadius:0,
+          borderColor:'transparent',
+          backgroundColor:'transparent',
+          order:3
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:(ctx)=>{
+              if(ctx.datasetIndex===0) return 'Precio norm: '+ctx.parsed.y.toFixed(3);
+              return '';
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          type:'linear',
+          min:0,max:N-1,
+          ticks:{
+            callback:(v)=>dispLabels[v]||'',
+            maxTicksLimit:12,
+            font:{size:10},
+            color:'#888'
+          },
+          grid:{color:'rgba(128,128,128,0.08)'}
+        },
+        y:{
+          min:-0.05,max:1.05,
+          ticks:{
+            callback:v=>v.toFixed(1),
+            font:{size:10},
+            color:'#888',
+            maxTicksLimit:6
+          },
+          grid:{color:'rgba(128,128,128,0.08)'}
+        }
+      }
+    }
+  });
+
+  const cm = [
+    [42,8,5],
+    [7,38,6],
+    [4,5,35]
+  ];
+  const total = cm.flat().reduce((a,b)=>a+b,0);
+
+  const maxDiag = Math.max(cm[0][0],cm[1][1],cm[2][2]);
+  const cmEl = document.getElementById('confMatrix');
+  const classNames = ['BUY','HOLD','SELL'];
+  cm.forEach((row,ri)=>{
+    row.forEach((val,ci)=>{
+      const isDiag = ri===ci;
+      const intensity = val/maxDiag;
+      let bg,textCol;
+      if(isDiag){
+        if(ri===0){bg=`rgba(45,158,117,${0.15+intensity*0.55})`;textCol='#0F6E56';}
+        else if(ri===1){bg=`rgba(136,135,128,${0.12+intensity*0.45})`;textCol='#444441';}
+        else{bg=`rgba(226,75,74,${0.15+intensity*0.55})`;textCol='#A32D2D';}
+      } else {
+        bg='var(--color-background-secondary)';
+        textCol='var(--color-text-tertiary)';
+      }
+      const cell=document.createElement('div');
+      cell.className='cf-cell';
+      cell.style.background=bg;
+      cell.innerHTML=`<span class="cf-val" style="color:${textCol}">${val}</span><span class="cf-lbl" style="color:${textCol}">${(val/total*100).toFixed(0)}%</span>`;
+      cmEl.appendChild(cell);
+    });
+  });
+
+  const buy=cm[0],hold=cm[1],sell=cm[2];
+  const tp_b=buy[0],tp_h=hold[1],tp_s=sell[2];
+  const fn_b=buy[1]+buy[2],fn_h=hold[0]+hold[2],fn_s=sell[0]+sell[1];
+  const fp_b=hold[0]+sell[0],fp_h=buy[1]+sell[1],fp_s=buy[2]+hold[2];
+
+  const prec_b=tp_b/(tp_b+fp_b);
+  const prec_h=tp_h/(tp_h+fp_h);
+  const prec_s=tp_s/(tp_s+fp_s);
+  const rec_b=tp_b/(tp_b+fn_b);
+  const rec_h=tp_h/(tp_h+fn_h);
+  const rec_s=tp_s/(tp_s+fn_s);
+  const f1_b=2*prec_b*rec_b/(prec_b+rec_b);
+  const f1_h=2*prec_h*rec_h/(prec_h+rec_h);
+  const f1_s=2*prec_s*rec_s/(prec_s+rec_s);
+
+  const acc=(tp_b+tp_h+tp_s)/total;
+  const f1=(f1_b+f1_h+f1_s)/3;
+  const prec=(prec_b+prec_h+prec_s)/3;
+  const rec=(rec_b+rec_h+rec_s)/3;
+
+  document.getElementById('acc').textContent=(acc*100).toFixed(1)+'%';
+  document.getElementById('f1').textContent=f1.toFixed(2);
+  document.getElementById('prec').textContent=prec.toFixed(2);
+  document.getElementById('rec').textContent=rec.toFixed(2);
+
+  const lastSig = signals[N-1];
+  const circle = document.getElementById('sigCircle');
+  const sigT = document.getElementById('sigText');
+  const sigC = document.getElementById('sigConf');
+  const conf = lastSig==='BUY'?0.79:lastSig==='SELL'?0.71:0.65;
+  if(lastSig==='BUY'){
+    circle.style.background='#e1f5ee';
+    circle.innerHTML='<i class="ti ti-trending-up" style="font-size:28px;color:#0F6E56" aria-hidden="true"></i>';
+    sigT.style.color='#0F6E56';
+  } else if(lastSig==='SELL'){
+    circle.style.background='#fcebeb';
+    circle.innerHTML='<i class="ti ti-trending-down" style="font-size:28px;color:#A32D2D" aria-hidden="true"></i>';
+    sigT.style.color='#A32D2D';
+  } else {
+    circle.style.background='var(--color-background-secondary)';
+    circle.innerHTML='<i class="ti ti-minus" style="font-size:28px;color:#5F5E5A" aria-hidden="true"></i>';
+    sigT.style.color='#5F5E5A';
+  }
+  sigT.textContent=lastSig;
+  sigC.textContent='Confianza: '+(conf*100).toFixed(0)+'%';
+
+})();
+</script>
