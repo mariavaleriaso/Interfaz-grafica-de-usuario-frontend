@@ -1,1 +1,190 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InvestAI - Autenticación</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .gradient-bg {
+      background: linear-gradient(135deg, #1F3864 0%, #312E81 50%, #4C1D95 100%);
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+    }
+  </style>
+</head>
+<body class="min-h-screen gradient-bg flex items-center justify-center p-6 relative overflow-hidden">
 
+  <!-- Fondo sutil -->
+  <div class="absolute inset-0 bg-[radial-gradient(at_center,#C5961A_0%,transparent_70%)] opacity-10"></div>
+
+  <div class="w-full max-w-md relative">
+    <!-- Logo -->
+    <div class="flex justify-center mb-10">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#C5961A] to-yellow-400 flex items-center justify-center shadow-xl shadow-[#C5961A]/50">
+          <span class="text-[#1F3864] text-3xl font-bold">IA</span>
+        </div>
+        <div>
+          <h1 class="text-4xl font-semibold text-white tracking-tighter">InvestAI</h1>
+          <p class="text-[#C5961A] text-sm -mt-1">INTELLIGENT FINANCE</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card -->
+    <div class="card border border-white/10 rounded-3xl p-8 shadow-2xl">
+      
+      <!-- Toggle -->
+      <div class="flex bg-white/10 rounded-2xl p-1 mb-8">
+        <button onclick="toggleMode(true)" id="loginBtn"
+          class="flex-1 py-3 text-sm font-semibold rounded-xl transition-all text-white">
+          Iniciar sesión
+        </button>
+        <button onclick="toggleMode(false)" id="registerBtn"
+          class="flex-1 py-3 text-sm font-semibold rounded-xl transition-all text-white">
+          Registrarse
+        </button>
+      </div>
+
+      <form id="authForm" onsubmit="handleSubmit(event)">
+        <!-- Email -->
+        <div class="mb-6">
+          <label class="block text-white/80 text-sm mb-2 font-medium">Correo electrónico</label>
+          <div class="relative">
+            <i class="fa-solid fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-white/40"></i>
+            <input type="email" id="email" required
+              class="w-full bg-white/10 border border-white/20 rounded-2xl pl-11 py-4 text-white placeholder:text-white/40 focus:outline-none focus:border-[#C5961A] transition-colors"
+              placeholder="tu@email.com">
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="mb-6">
+          <label class="block text-white/80 text-sm mb-2 font-medium">Contraseña</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-white/40"></i>
+            <input type="password" id="password" required
+              class="w-full bg-white/10 border border-white/20 rounded-2xl pl-11 pr-12 py-4 text-white placeholder:text-white/40 focus:outline-none focus:border-[#C5961A] transition-colors"
+              placeholder="••••••••">
+            <button type="button" onclick="togglePassword()" 
+              class="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white">
+              <i class="fa-solid fa-eye" id="eyeIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Olvidaste contraseña -->
+        <div id="forgotPassword" class="text-right mb-6">
+          <a href="#" class="text-[#C5961A] hover:underline text-sm">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <!-- Botón principal -->
+        <button type="submit" id="submitBtn"
+          class="w-full bg-[#C5961A] hover:bg-[#d4a72f] active:bg-[#b88a18] text-[#1F3864] font-semibold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#C5961A]/40">
+          <span id="btnText">Iniciar sesión</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+
+        <!-- Divider -->
+        <div class="flex items-center my-6">
+          <div class="flex-1 h-px bg-white/10"></div>
+          <span class="px-4 text-white/40 text-sm">o</span>
+          <div class="flex-1 h-px bg-white/10"></div>
+        </div>
+
+        <!-- Google -->
+        <button type="button" onclick="googleLogin()"
+          class="w-full border border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10 text-white py-4 rounded-2xl transition-all flex items-center justify-center gap-3 font-medium">
+          <i class="fa-brands fa-google text-lg"></i>
+          Continuar con Google
+        </button>
+      </form>
+
+      <!-- Legal -->
+      <div class="mt-8 text-center text-white/40 text-xs leading-relaxed">
+        Al continuar, aceptas nuestros 
+        <a href="#" class="hover:text-white/70 underline">Términos de Servicio</a> y 
+        <a href="#" class="hover:text-white/70 underline">Política de Privacidad</a>.
+      </div>
+    </div>
+
+    <p class="text-center text-white/30 text-xs mt-8">
+      © 2026 InvestAI • Plataforma de inversión inteligente
+    </p>
+  </div>
+
+  <script>
+    let isLogin = true;
+
+    function toggleMode(login) {
+      isLogin = login;
+      
+      const loginBtn = document.getElementById('loginBtn');
+      const registerBtn = document.getElementById('registerBtn');
+      const btnText = document.getElementById('btnText');
+      const forgotDiv = document.getElementById('forgotPassword');
+
+      if (login) {
+        loginBtn.classList.add('bg-white', 'text-[#1F3864]');
+        registerBtn.classList.remove('bg-white', 'text-[#1F3864]');
+        btnText.textContent = 'Iniciar sesión';
+        forgotDiv.style.display = 'block';
+      } else {
+        registerBtn.classList.add('bg-white', 'text-[#1F3864]');
+        loginBtn.classList.remove('bg-white', 'text-[#1F3864]');
+        btnText.textContent = 'Crear cuenta';
+        forgotDiv.style.display = 'none';
+      }
+    }
+
+    function togglePassword() {
+      const passwordField = document.getElementById('password');
+      const eyeIcon = document.getElementById('eyeIcon');
+      
+      if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        eyeIcon.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        passwordField.type = 'password';
+        eyeIcon.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const btn = document.getElementById('submitBtn');
+      const originalText = document.getElementById('btnText').textContent;
+      
+      btn.innerHTML = `
+        <span class="animate-spin inline-block w-5 h-5 border-2 border-[#1F3864] border-t-transparent rounded-full"></span>
+      `;
+      btn.disabled = true;
+
+      setTimeout(() => {
+        alert(`✅ ${isLogin ? 'Inicio de sesión' : 'Registro'} simulado con éxito para:\n${email}`);
+        btn.innerHTML = `<span>${originalText}</span><i class="fa-solid fa-arrow-right"></i>`;
+        btn.disabled = false;
+      }, 1800);
+    }
+
+    function googleLogin() {
+      alert("🔄 Redirigiendo a Google Sign-In...");
+    }
+
+    // Inicializar Tailwind y modo login
+    window.onload = () => {
+      toggleMode(true);
+    };
+  </script>
+</body>
+</html>
