@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>InvestAI — Estrategias</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--primary:#1F3864;--accent:#C5961A;--up:#26A69A;--down:#EF5350;--border:#e1e5ea}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Calibri,sans-serif;background:#f5f7fb}
+header{background:var(--primary);color:#fff;padding:14px 24px}header h1{margin:0;font-size:18px}header h1 span{color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;padding:16px 24px}
+.card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.c4{grid-column:span 4}.c8{grid-column:span 8}.c12{grid-column:span 12}.c3{grid-column:span 3}
+@media(max-width:1000px){.c4,.c8,.c3{grid-column:span 12}}
+h3{margin:0 0 12px;color:var(--primary);font-size:15px}
+label{display:block;font-size:12px;color:#6c757d;margin:10px 0 4px;font-weight:600}
+input,select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px}
+.strat{border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden}
+.strat-head{padding:12px;background:#f8f9fb;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:600;color:var(--primary)}
+.strat-body{padding:12px;display:none;border-top:1px solid var(--border)}
+.strat.open .strat-body{display:block}
+.kv{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}
+.kv b{color:var(--primary)}
+table{width:100%;border-collapse:collapse}th,td{padding:10px;text-align:left;border-bottom:1px solid var(--border);font-size:13px}
+th{background:#f0f3f8;color:var(--primary)}
+.ratio{display:flex;align-items:center;gap:10px;padding:12px;background:#f8f9fb;border-radius:8px;margin-bottom:8px}
+.ratio .icon{font-size:24px}.ratio .v{font-size:20px;font-weight:700;color:var(--primary);margin-left:auto}
+</style></head><body>
+<header><h1>Invest<span>AI</span> — Generación de Estrategias</h1></header>
+<div class="grid">
+  <div class="card c4">
+    <h3>Perfil del Inversor</h3>
+    <label>Tolerancia al riesgo: <span id="riskVal" style="color:var(--accent);font-weight:700">5</span></label>
+    <input type="range" min="1" max="10" value="5" id="risk"/>
+    <label>Horizonte temporal</label>
+    <select id="hor"><option>Corto plazo (1-3 meses)</option><option>Medio plazo (3-12 meses)</option><option>Largo plazo (1+ años)</option></select>
+    <label>Capital disponible (USD)</label>
+    <input type="number" id="cap" value="50000"/>
+    <button onclick="generate()" style="margin-top:14px;width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer">Generar Estrategias</button>
+    <h3 style="margin-top:18px">Ratios Clave</h3>
+    <div class="ratio"><span class="icon">📊</span><span>Sharpe Ratio</span><span class="v" id="rSharpe">1.82</span></div>
+    <div class="ratio"><span class="icon">⚖️</span><span>Sortino Ratio</span><span class="v" id="rSortino">2.45</span></div>
+    <div class="ratio"><span class="icon">📉</span><span>Calmar Ratio</span><span class="v" id="rCalmar">1.32</span></div>
+  </div>
+  <div class="card c8">
+    <h3>Estrategias Sugeridas</h3>
+    <div id="strats"></div>
+    <h3 style="margin-top:18px">Diagrama de Payoff</h3>
+    <canvas id="payoff" height="160"></canvas>
+  </div>
+  <div class="card c12">
+    <h3>Comparativa de Estrategias</h3>
+    <table><thead><tr><th>Estrategia</th><th>Beneficio máx.</th><th>Riesgo máx.</th><th>Punto equilibrio</th><th>Ratio B/R</th><th>Recomendación</th></tr></thead><tbody id="tbl"></tbody></table>
+  </div>
+</div>
+<script>
+const STRATS=[
+  {name:'Covered Call',max:850,risk:4200,be:178,desc:'Vende calls cubiertas para generar ingresos sobre acciones que ya posees.'},
+  {name:'Naked Put',max:1200,risk:8500,be:172,desc:'Vende puts descubiertas obteniendo prima si el precio se mantiene.'},
+  {name:'Bull Call Spread',max:2400,risk:600,be:182,desc:'Compra call ITM y vende call OTM. Beneficio limitado, riesgo controlado.'},
+  {name:'Bear Put Spread',max:1800,risk:700,be:175,desc:'Compra put ITM y vende put OTM. Apuesta bajista con riesgo limitado.'},
+  {name:'Iron Condor',max:600,risk:1400,be:'170-186',desc:'Estrategia neutral. Beneficia de baja volatilidad en un rango definido.'}
+];
+function payoffData(name){
+  const x=[],y=[];for(let p=150;p<=210;p+=2){x.push(p);
+    let v=0;
+    if(name==='Covered Call')v=Math.min(p-175,5)*100;
+    else if(name==='Naked Put')v=p<175?(p-175)*100:300;
+    else if(name==='Bull Call Spread')v=Math.max(-300,Math.min((p-178)*100-300,1200));
+    else if(name==='Bear Put Spread')v=Math.max(-300,Math.min((178-p)*100-300,1200));
+    else if(name==='Iron Condor')v=p>170&&p<186?600:-Math.abs(p-178)*40+200;
+    y.push(v);
+  } return {x,y};
+}
+function generate(){
+  const risk=parseInt(document.getElementById('risk').value);
+  const strats=document.getElementById('strats');strats.innerHTML='';
+  const tbl=document.getElementById('tbl');tbl.innerHTML='';
+  STRATS.forEach((s,i)=>{
+    const reco=risk<=3?'Conservador':risk<=7?'Moderado':'Agresivo';
+    strats.innerHTML+=`<div class="strat ${i===0?'open':''}" onclick="this.classList.toggle('open');drawPayoff('${s.name}')">
+      <div class="strat-head">${s.name}<span style="color:#6c757d;font-size:12px">▼</span></div>
+      <div class="strat-body">
+        <p style="font-size:13px;color:#444;margin:0 0 8px">${s.desc}</p>
+        <div class="kv"><span>Beneficio máx.</span><b style="color:var(--up)">+$${s.max}</b></div>
+        <div class="kv"><span>Riesgo máx.</span><b style="color:var(--down)">-$${s.risk}</b></div>
+        <div class="kv"><span>Punto de equilibrio</span><b>$${s.be}</b></div>
+      </div></div>`;
+    tbl.innerHTML+=`<tr><td><b>${s.name}</b></td><td style="color:var(--up)">+$${s.max}</td><td style="color:var(--down)">-$${s.risk}</td><td>$${s.be}</td><td><b>${(s.max/s.risk).toFixed(2)}</b></td><td><span style="background:var(--accent);color:#fff;padding:3px 8px;border-radius:4px;font-size:11px">${reco}</span></td></tr>`;
+  });
+  drawPayoff('Covered Call');
+}
+let chart;
+function drawPayoff(name){
+  const d=payoffData(name);
+  if(chart)chart.destroy();
+  chart=new Chart(document.getElementById('payoff'),{type:'line',
+    data:{labels:d.x,datasets:[{label:name,data:d.y,borderColor:'#1F3864',backgroundColor:'rgba(31,56,100,.1)',fill:true,tension:.2}]},
+    options:{plugins:{legend:{display:true}},scales:{x:{title:{display:true,text:'Precio del subyacente ($)'}},y:{title:{display:true,text:'P&L ($)'}}}}});
+}
+document.getElementById('risk').addEventListener('input',e=>document.getElementById('riskVal').textContent=e.target.value);
+generate();
+</script></body></html>
