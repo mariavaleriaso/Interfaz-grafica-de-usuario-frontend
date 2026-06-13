@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Invest | Secure Authentication</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .screen { display: none; animation: fadeIn 0.4s ease-out forwards; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .error-message { font-size: 0.75rem; color: #f87171; margin-top: 0.25rem; display: none; }
+        .input-error { border-color: #f87171 !important; }
+        .strength-bar { height: 4px; border-radius: 2px; transition: all 0.3s; width: 0%; }
+        input:focus { outline: none; border-color: #3b82f6 !important; ring: 2px; ring-color: #3b82f6; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Contenedor Principal -->
+    <div class="w-full max-w-md relative">
+        
+        <!-- 1. PANTALLA: INICIO DE SESIÓN -->
+        <div id="screen-login" class="screen active glass rounded-3xl p-8 shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="trending-up" class="text-white"></i>
+                </div>
+                <h2 class="text-2xl font-bold">Bienvenido de nuevo</h2>
+                <p class="text-slate-400 text-sm">Ingresa a tu terminal de inversión IA</p>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Email</label>
+                    <input type="email" id="login-email" placeholder="nombre@ejemplo.com" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl transition-all">
+                    <p class="error-message" id="err-login-email">Introduce un email válido.</p>
+                </div>
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase">Contraseña</label>
+                        <button type="button" onclick="goTo('recovery')" class="text-xs text-blue-400 hover:underline">¿Olvidaste tu contraseña?</button>
+                    </div>
+                    <div class="relative">
+                        <input type="password" id="login-pass" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl pr-10">
+                        <button type="button" onclick="togglePass('login-pass')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="remember" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-600">
+                    <label for="remember" class="ml-2 text-sm text-slate-400">Recordarme por 30 días</label>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20">Iniciar Sesión</button>
+            </form>
+
+            <div class="relative my-8">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
+                <div class="relative flex justify-center text-xs uppercase"><span class="bg-slate-900 px-2 text-slate-500">O continuar con</span></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button class="flex items-center justify-center gap-2 bg-white text-slate-900 py-2.5 rounded-xl font-semibold hover:bg-slate-100 transition-all">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5"> Google
+                </button>
+                <button class="flex items-center justify-center gap-2 bg-slate-800 text-white py-2.5 rounded-xl font-semibold border border-slate-700 hover:bg-slate-700 transition-all">
+                    <i data-lucide="github" class="w-5 h-5"></i> GitHub
+                </button>
+            </div>
+
+            <p class="text-center text-sm text-slate-400 mt-8">
+                ¿No tienes cuenta? <button onclick="goTo('register')" class="text-blue-400 font-bold hover:underline">Regístrate</button>
+            </p>
+        </div>
+
+        <!-- 2. PANTALLA: REGISTRO -->
+        <div id="screen-register" class="screen glass rounded-3xl p-8 shadow-2xl">
+            <button onclick="goTo('login')" class="text-slate-400 hover:text-white mb-6 flex items-center gap-2 text-sm">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver al inicio
+            </button>
+            <h2 class="text-2xl font-bold mb-2">Crear cuenta</h2>
+            <p class="text-slate-400 text-sm mb-6">Empieza a optimizar tu capital hoy mismo.</p>
+
+            <form id="register-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Nombre Completo</label>
+                    <input type="text" id="reg-name" placeholder="John Doe" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl">
+                    <p class="error-message" id="err-reg-name">Este campo es obligatorio.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Email</label>
+                    <input type="email" id="reg-email" placeholder="tu@email.com" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Contraseña</label>
+                    <input type="password" id="reg-pass" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl mb-2">
+                    <div class="flex gap-1 mb-1">
+                        <div id="strength-1" class="strength-bar bg-slate-700 flex-1"></div>
+                        <div id="strength-2" class="strength-bar bg-slate-700 flex-1"></div>
+                        <div id="strength-3" class="strength-bar bg-slate-700 flex-1"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-500 uppercase">Mín. 8 caracteres, números y símbolos</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Confirmar Contraseña</label>
+                    <input type="password" id="reg-pass-conf" class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl">
+                    <p class="error-message" id="err-reg-match">Las contraseñas no coinciden.</p>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold mt-4 transition-all">Crear Cuenta</button>
+            </form>
+        </div>
+
+        <!-- 3. PANTALLA: RECUPERACIÓN -->
+        <div id="screen-recovery" class="screen glass rounded-3xl p-8 shadow-2xl">
+            <button onclick="goTo('login')" class="text-slate-400 hover:text-white mb-6 flex items-center gap-2 text-sm">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver
+            </button>
+            <div class="bg-orange-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                <i data-lucide="key-round" class="text-orange-500"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-2">Recuperar acceso</h2>
+            <p class="text-slate-400 text-sm mb-8">Te enviaremos un enlace de restablecimiento a tu correo electrónico.</p>
+
+            <form id="recovery-form" class="space-y-6">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Correo Electrónico</label>
+                    <input type="email" id="rec-email" required class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl">
+                </div>
+                <button type="submit" class="w-full bg-white text-slate-900 py-3 rounded-xl font-bold hover:bg-slate-200 transition-all">Enviar Instrucciones</button>
+            </form>
+            <div id="recovery-success" class="hidden mt-6 p-4 bg-emerald-500/20 border border-emerald-500/50 rounded-xl text-emerald-400 text-sm">
+                ¡Enviado! Revisa tu bandeja de entrada en unos minutos.
+            </div>
+        </div>
+
+        <!-- 4. PANTALLA: 2FA -->
+        <div id="screen-2fa" class="screen glass rounded-3xl p-8 shadow-2xl text-center">
+            <div class="bg-blue-600/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="shield-check" class="text-blue-500 w-8 h-8"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-2">Verificación de Seguridad</h2>
+            <p class="text-slate-400 text-sm mb-8">Hemos enviado un código de 6 dígitos a <span class="text-white font-semibold">j***@email.com</span></p>
+
+            <div class="flex justify-between gap-2 mb-8" id="otp-container">
+                <input type="text" maxlength="1" class="otp-input w-12 h-14 bg-slate-800 border border-slate-700 rounded-xl text-center text-xl font-bold focus:border-blue-500 outline-none">
+                <input type="text" maxlength="1" class="otp-input w-12 h-14 bg-slate-800 border border-slate-700 rounded-xl text-center text-xl font-bold focus:border-blue-500 outline-none">
+                <input type="text" maxlength="1" class="otp-input w-12 h-14 bg-slate-800 border border-slate-700 rounded-xl text-center text-xl font-bold focus:border-blue-500 outline-none">
+                <input type="text" maxlength="1" class="otp-input w-12 h-14 bg-slate-800 border border-slate-700 rounded-xl text-center text-xl font-bold focus:border-blue-500 outline-none">
+                <input type="text" maxlength="1" class="otp-input w-12 h-14 bg-slate-800 border border-slate-700 rounded-xl text-center text-xl font-bold focus:border-blue-500 outline-none">
+                <input type="text" maxlength="1" class="otp-input w-12 h-14 bg-slate-800 border border-slate-700 rounded-xl text-center text-xl font-bold focus:border-blue-500 outline-none">
+            </div>
+
+            <button onclick="goTo('welcome')" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition-all mb-4">Verificar y Entrar</button>
+            
+            <p class="text-sm text-slate-500">
+                ¿No recibiste el código? <br>
+                <button id="resend-btn" disabled class="text-blue-400 font-semibold disabled:opacity-50 mt-1">Reenviar código en <span id="timer">59</span>s</button>
+            </p>
+        </div>
+
+        <!-- 5. PANTALLA: BIENVENIDA -->
+        <div id="screen-welcome" class="screen glass rounded-3xl p-10 shadow-2xl text-center">
+            <div class="relative w-24 h-24 mx-auto mb-6">
+                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80" class="rounded-full border-4 border-blue-600 shadow-xl">
+                <div class="absolute bottom-0 right-0 bg-emerald-500 w-6 h-6 rounded-full border-4 border-slate-900"></div>
+            </div>
+            <h2 class="text-3xl font-bold mb-2">¡Hola de nuevo, John!</h2>
+            <p class="text-slate-400 mb-8">Tu portafolio ha subido un <span class="text-emerald-400 font-bold">+2.4%</span> hoy.</p>
+            
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-slate-800/50 p-4 rounded-2xl text-left border border-slate-700">
+                    <p class="text-xs text-slate-500 uppercase font-bold mb-1">Última Conexión</p>
+                    <p class="text-sm font-semibold">Hace 2 horas</p>
+                </div>
+                <div class="bg-slate-800/50 p-4 rounded-2xl text-left border border-slate-700">
+                    <p class="text-xs text-slate-500 uppercase font-bold mb-1">Nivel de Seguridad</p>
+                    <p class="text-sm font-semibold text-emerald-400">Excelente (2FA)</p>
+                </div>
+            </div>
+
+            <button class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 py-4 rounded-2xl font-bold text-lg hover:scale-[1.02] transition-all shadow-xl shadow-blue-600/30">
+                Acceder al Dashboard
+            </button>
+            <button onclick="goTo('login')" class="mt-6 text-slate-500 text-sm hover:text-white">Cerrar Sesión</button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- NAVEGACIÓN ---
+        function goTo(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-' + screenId).classList.add('active');
+            
+            if(screenId === '2fa') start2FATimer();
+        }
+
+        function togglePass(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        // --- VALIDACIONES EN TIEMPO REAL ---
+        const loginForm = document.getElementById('login-form');
+        const regPass = document.getElementById('reg-pass');
+
+        // Indicador de fuerza de contraseña
+        regPass.addEventListener('input', (e) => {
+            const val = e.target.value;
+            const s1 = document.getElementById('strength-1');
+            const s2 = document.getElementById('strength-2');
+            const s3 = document.getElementById('strength-3');
+            
+            s1.className = s2.className = s3.className = 'strength-bar bg-slate-700 flex-1';
+
+            if(val.length > 0) s1.classList.add('bg-red-500');
+            if(val.length >= 8 && /[0-9]/.test(val)) s2.classList.add('bg-yellow-500');
+            if(val.length >= 8 && /[!@#$%^&*]/.test(val)) s3.classList.add('bg-emerald-500');
+        });
+
+        // Simulación de Login
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email');
+            const errEmail = document.getElementById('err-login-email');
+
+            if(!email.value.includes('@')) {
+                email.classList.add('input-error');
+                errEmail.style.display = 'block';
+            } else {
+                email.classList.remove('input-error');
+                errEmail.style.display = 'none';
+                goTo('2fa');
+            }
+        });
+
+        // Simulación de Registro
+        document.getElementById('register-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const p1 = document.getElementById('reg-pass').value;
+            const p2 = document.getElementById('reg-pass-conf').value;
+            if(p1 !== p2) {
+                document.getElementById('err-reg-match').style.display = 'block';
+            } else {
+                goTo('2fa');
+            }
+        });
+
+        // Simulación de Recuperación
+        document.getElementById('recovery-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            document.getElementById('recovery-success').classList.remove('hidden');
+        });
+
+        // --- LÓGICA 2FA ---
+        const otpInputs = document.querySelectorAll('.otp-input');
+        otpInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value && index < otpInputs.length - 1) {
+                    otpInputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === "Backspace" && !e.target.value && index > 0) {
+                    otpInputs[index - 1].focus();
+                }
+            });
+        });
+
+        function start2FATimer() {
+            let time = 59;
+            const timerSpan = document.getElementById('timer');
+            const btn = document.getElementById('resend-btn');
+            const interval = setInterval(() => {
+                time--;
+                timerSpan.innerText = time;
+                if(time <= 0) {
+                    clearInterval(interval);
+                    btn.disabled = false;
+                    btn.innerText = "Reenviar código ahora";
+                }
+            }, 1000);
+        }
+
+        // Inicializar Iconos
+        lucide.createIcons();
+    </script>
+</body>
+</html>

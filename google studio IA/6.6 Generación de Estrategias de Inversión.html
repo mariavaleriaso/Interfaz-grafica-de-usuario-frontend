@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Investment Strategist | Terminal Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .risk-high { color: #f87171; }
+        .risk-low { color: #4ade80; }
+        .sort-header:hover { cursor: pointer; text-decoration: underline; }
+        .fab { position: fixed; bottom: 2rem; right: 2rem; transition: transform 0.2s; }
+        .fab:hover { transform: scale(1.1); }
+        input, select { background: #1e293b !important; border: 1px solid #334155 !important; color: white !important; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="max-w-7xl mx-auto mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+                AI Strategy Engine
+            </h1>
+            <p class="text-slate-400">Generación de carteras inteligentes v2.4</p>
+        </div>
+        <div class="flex gap-4">
+            <div class="text-right">
+                <span class="block text-xs text-slate-500 uppercase tracking-widest">Estado del Mercado</span>
+                <span class="text-emerald-400 font-semibold">● BULLISH</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Panel Lateral Izquierdo: Métricas y Gráfico -->
+        <div class="lg:col-span-4 space-y-6">
+            <div class="glass-card rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i data-lucide="pie-chart" class="mr-2 text-blue-400"></i> Distribución de Activos
+                </h3>
+                <div class="h-64 flex justify-center items-center">
+                    <canvas id="portfolioChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i data-lucide="activity" class="mr-2 text-emerald-400"></i> Métricas Clave
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
+                        <span class="text-slate-400 text-sm">Rentabilidad Esperada</span>
+                        <span id="metric-roi" class="text-xl font-bold text-emerald-400">0%</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
+                        <span class="text-slate-400 text-sm">Volatilidad (Anual)</span>
+                        <span id="metric-vol" class="text-xl font-bold text-orange-400">0%</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
+                        <span class="text-slate-400 text-sm">Diversificación</span>
+                        <span id="metric-div" class="text-xl font-bold text-blue-400">Alta</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Derecho: Tabla de Activos -->
+        <div class="lg:col-span-8">
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">Composición de la Estrategia</h3>
+                    <span id="strategy-label" class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs font-bold uppercase tracking-wider">Moderada</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left" id="assetTable">
+                        <thead class="bg-slate-800/50 text-slate-400 text-sm">
+                            <tr>
+                                <th class="p-4 sort-header" onclick="sortData('name')">Activo <i data-lucide="chevrons-up-down" class="inline w-3"></i></th>
+                                <th class="p-4 sort-header" onclick="sortData('type')">Tipo</th>
+                                <th class="p-4 sort-header text-right" onclick="sortData('weight')">Asignación %</th>
+                                <th class="p-4 sort-header text-center" onclick="sortData('risk')">Riesgo</th>
+                                <th class="p-4 sort-header text-right" onclick="sortData('yield')">Rend. Est.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-700">
+                            <!-- Inyectado via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Botón Flotante -->
+    <button onclick="toggleModal()" class="fab bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-lg shadow-blue-500/40 flex items-center gap-2">
+        <i data-lucide="plus"></i>
+        <span class="font-bold">Nueva Estrategia</span>
+    </button>
+
+    <!-- Modal de Configuración -->
+    <div id="configModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="glass-card w-full max-w-xl rounded-3xl p-8 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold italic">Configurar Estrategia IA</h2>
+                <button onclick="toggleModal()" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
+            </div>
+            
+            <form id="strategyForm" class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div class="space-y-2">
+                    <label>Capital Inicial (USD)</label>
+                    <input type="number" id="capital" class="w-full p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" value="10000">
+                </div>
+                <div class="space-y-2">
+                    <label>Horizonte Temporal</label>
+                    <select id="horizon" class="w-full p-3 rounded-xl outline-none">
+                        <option value="1">Corto Plazo (< 1 año)</option>
+                        <option value="5" selected>Medio Plazo (1-5 años)</option>
+                        <option value="10">Largo Plazo (> 5 años)</option>
+                    </select>
+                </div>
+                <div class="space-y-2 md:col-span-2">
+                    <label>Nivel de Riesgo</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="risk" value="low" class="hidden peer">
+                            <div class="p-3 text-center border border-slate-700 rounded-xl peer-checked:bg-emerald-500/20 peer-checked:border-emerald-500">Conservador</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="risk" value="mid" class="hidden peer" checked>
+                            <div class="p-3 text-center border border-slate-700 rounded-xl peer-checked:bg-blue-500/20 peer-checked:border-blue-500">Moderado</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="risk" value="high" class="hidden peer">
+                            <div class="p-3 text-center border border-slate-700 rounded-xl peer-checked:bg-red-500/20 peer-checked:border-red-500">Agresivo</div>
+                        </label>
+                    </div>
+                </div>
+                <div class="space-y-2 md:col-span-2">
+                    <label>Porcentaje Máximo por Activo (%)</label>
+                    <input type="range" id="maxWeight" min="5" max="50" value="25" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-xs text-slate-400"><span>5%</span><span id="maxWeightVal">25%</span><span>50%</span></div>
+                </div>
+                
+                <button type="button" onclick="generateStrategy()" class="md:col-span-2 w-full py-4 bg-gradient-to-r from-blue-600 to-blue-400 text-white rounded-xl font-bold text-lg hover:shadow-blue-500/20 hover:shadow-lg transition-all">
+                    Generar Estrategia con IA
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- Datos de Ejemplo Realistas ---
+        const assetsBase = [
+            { id: 1, name: "S&P 500 ETF (VOO)", type: "Acciones", risk: "Medio", yield: 9.5, profile: ['mid', 'high'] },
+            { id: 2, name: "Bitcoin (BTC)", type: "Crypto", risk: "Muy Alto", yield: 45.0, profile: ['high'] },
+            { id: 3, name: "Bonos Tesoro US 10Y", type: "Renta Fija", risk: "Bajo", yield: 4.2, profile: ['low', 'mid'] },
+            { id: 4, name: "Nasdaq 100 (QQQ)", type: "Tecnología", risk: "Alto", yield: 15.2, profile: ['mid', 'high'] },
+            { id: 5, name: "Oro (GLD)", type: "Commodity", risk: "Bajo", yield: 6.0, profile: ['low', 'mid', 'high'] },
+            { id: 6, name: "Real Estate (VNQ)", type: "REITs", risk: "Medio", yield: 8.1, profile: ['mid'] },
+            { id: 7, name: "Ethereum (ETH)", type: "Crypto", risk: "Muy Alto", yield: 38.0, profile: ['high'] },
+            { id: 8, name: "Bonds Globales (BND)", type: "Renta Fija", risk: "Muy Bajo", yield: 3.5, profile: ['low'] }
+        ];
+
+        let currentStrategy = [];
+        let portfolioChart = null;
+
+        // --- Inicialización ---
+        window.onload = () => {
+            lucide.createIcons();
+            generateStrategy(); // Carga inicial
+        };
+
+        // --- Lógica del Modal ---
+        function toggleModal() {
+            const modal = document.getElementById('configModal');
+            modal.classList.toggle('hidden');
+        }
+
+        document.getElementById('maxWeight').oninput = function() {
+            document.getElementById('maxWeightVal').innerText = this.value + '%';
+        }
+
+        // --- Generador de Estrategia ---
+        function generateStrategy() {
+            const risk = document.querySelector('input[name="risk"]:checked').value;
+            const maxWeight = parseInt(document.getElementById('maxWeight').value);
+            const capital = parseInt(document.getElementById('capital').value);
+
+            // Filtrar y asignar pesos aleatorios controlados
+            const filtered = assetsBase.filter(a => a.profile.includes(risk));
+            let remaining = 100;
+            
+            currentStrategy = filtered.map((asset, idx) => {
+                let weight;
+                if (idx === filtered.length - 1) {
+                    weight = remaining;
+                } else {
+                    weight = Math.min(Math.floor(Math.random() * (100 / filtered.length) + 10), maxWeight, remaining);
+                    remaining -= weight;
+                }
+                return { ...asset, weight };
+            }).filter(a => a.weight > 0);
+
+            // Ajustar si queda restante por redondeo
+            if(remaining > 0) currentStrategy[0].weight += remaining;
+
+            updateUI(risk);
+            toggleModal();
+        }
+
+        // --- Actualización de Interfaz ---
+        function updateUI(risk) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            currentStrategy.forEach(asset => {
+                const riskColor = asset.risk.includes('Alto') ? 'text-red-400' : (asset.risk.includes('Bajo') ? 'text-emerald-400' : 'text-slate-200');
+                
+                const row = `<tr class="hover:bg-white/5 transition-colors">
+                    <td class="p-4 font-semibold">${asset.name}</td>
+                    <td class="p-4 text-slate-400">${asset.type}</td>
+                    <td class="p-4 text-right font-mono">${asset.weight}%</td>
+                    <td class="p-4 text-center">
+                        <span class="px-2 py-1 rounded text-xs font-bold bg-slate-900 ${riskColor}">${asset.risk}</span>
+                    </td>
+                    <td class="p-4 text-right text-emerald-400 font-bold">${asset.yield}%</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+
+            const avgYield = (currentStrategy.reduce((acc, curr) => acc + (curr.yield * curr.weight / 100), 0)).toFixed(1);
+            document.getElementById('metric-roi').innerText = avgYield + '%';
+            document.getElementById('metric-vol').innerText = (risk === 'high' ? '22.4%' : (risk === 'mid' ? '12.1%' : '5.8%'));
+            document.getElementById('strategy-label').innerText = risk === 'high' ? 'Agresiva' : (risk === 'mid' ? 'Moderada' : 'Conservadora');
+
+            updateChart();
+        }
+
+        // --- Gráfico Circular ---
+        function updateChart() {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            if (portfolioChart) portfolioChart.destroy();
+
+            portfolioChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: currentStrategy.map(a => a.name),
+                    datasets: [{
+                        data: currentStrategy.map(a => a.weight),
+                        backgroundColor: [
+                            '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 20
+                    }]
+                },
+                options: {
+                    plugins: { 
+                        legend: { display: false }
+                    },
+                    cutout: '70%',
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // --- Ordenación de Tabla ---
+        let sortOrder = true;
+        function sortData(key) {
+            sortOrder = !sortOrder;
+            currentStrategy.sort((a, b) => {
+                if (a[key] < b[key]) return sortOrder ? -1 : 1;
+                if (a[key] > b[key]) return sortOrder ? 1 : -1;
+                return 0;
+            });
+            updateUI(document.querySelector('input[name="risk"]:checked').value);
+        }
+    </script>
+</body>
+</html>

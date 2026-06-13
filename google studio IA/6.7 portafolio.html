@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Portfolio Manager | Terminal de Inversión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b0f1a; color: #e2e8f0; }
+        .glass { background: rgba(23, 32, 53, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .positive { color: #10b981; }
+        .negative { color: #f43f5e; }
+        .sort-icon { width: 14px; height: 14px; display: inline; margin-left: 4px; opacity: 0.5; }
+        tr:hover { background: rgba(255,255,255,0.02); }
+        input, select { background: #1e293b !important; border: 1px solid #334155 !important; color: white; }
+    </style>
+</head>
+<body class="p-4 md:p-6 lg:p-8">
+
+    <!-- Header & Resumen -->
+    <header class="max-w-7xl mx-auto mb-8">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <i data-lucide="layout-dashboard" class="text-blue-500"></i> Mi Portafolio IA
+                </h1>
+                <p class="text-slate-400">Análisis y gestión de activos en tiempo real</p>
+            </div>
+            <div class="flex gap-3">
+                <div class="glass p-3 rounded-xl flex items-center gap-3">
+                    <div class="bg-blue-500/20 p-2 rounded-lg"><i data-lucide="shield-check" class="text-blue-400 w-5 h-5"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-bold">Riesgo IA</p>
+                        <p id="metric-risk" class="font-semibold text-blue-400">Moderado</p>
+                    </div>
+                </div>
+                <div class="glass p-3 rounded-xl flex items-center gap-3">
+                    <div class="bg-emerald-500/20 p-2 rounded-lg"><i data-lucide="pie-chart" class="text-emerald-400 w-5 h-5"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-bold">Diversificación</p>
+                        <p id="metric-div" class="font-semibold text-emerald-400">85%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Métricas Principales -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="glass p-6 rounded-2xl">
+                <p class="text-slate-400 text-sm mb-1 font-medium">Valor Total</p>
+                <h2 id="total-value" class="text-3xl font-bold text-white">$0.00</h2>
+            </div>
+            <div class="glass p-6 rounded-2xl">
+                <p class="text-slate-400 text-sm mb-1 font-medium">Rentabilidad Acumulada</p>
+                <h2 id="total-yield" class="text-3xl font-bold positive">+0.00%</h2>
+            </div>
+            <div class="glass p-6 rounded-2xl">
+                <p class="text-slate-400 text-sm mb-1 font-medium">Ganancia/Pérdida Total</p>
+                <h2 id="total-pl" class="text-3xl font-bold positive">+$0.00</h2>
+            </div>
+            <div class="glass p-6 rounded-2xl">
+                <p class="text-slate-400 text-sm mb-1 font-medium">Poder de Compra</p>
+                <h2 class="text-3xl font-bold text-slate-300">$12,450.00</h2>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Sección Izquierda: Tabla y Filtros -->
+        <div class="lg:col-span-8 space-y-6">
+            <div class="glass rounded-2xl overflow-hidden">
+                <!-- Barra de Herramientas -->
+                <div class="p-4 border-b border-white/5 flex flex-col md:flex-row justify-between gap-4">
+                    <div class="relative flex-grow">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar activo (p.ej: BTC, AAPL)..." class="w-full pl-10 pr-4 py-2 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <select id="typeFilter" class="px-4 py-2 rounded-xl text-sm outline-none">
+                        <option value="All">Todos los tipos</option>
+                        <option value="Acciones">Acciones</option>
+                        <option value="Crypto">Criptomonedas</option>
+                        <option value="Commodity">Commodities</option>
+                        <option value="ETF">ETFs</option>
+                    </select>
+                </div>
+
+                <!-- Tabla -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm" id="portfolioTable">
+                        <thead class="bg-slate-800/30 text-slate-400 font-semibold">
+                            <tr>
+                                <th class="p-4 cursor-pointer hover:text-white" onclick="sortTable('name')">Activo <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
+                                <th class="p-4 cursor-pointer hover:text-white" onclick="sortTable('type')">Tipo <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
+                                <th class="p-4 text-right cursor-pointer hover:text-white" onclick="sortTable('qty')">Cant. <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
+                                <th class="p-4 text-right cursor-pointer hover:text-white" onclick="sortTable('buyPrice')">P. Compra <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
+                                <th class="p-4 text-right cursor-pointer hover:text-white" onclick="sortTable('currentPrice')">P. Actual <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
+                                <th class="p-4 text-right cursor-pointer hover:text-white" onclick="sortTable('marketValue')">V. Mercado <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
+                                <th class="p-4 text-right cursor-pointer hover:text-white" onclick="sortTable('yield')">Rend. % <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
+                                <th class="p-4 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-white/5">
+                            <!-- Inyectado via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección Derecha: Gráficos -->
+        <div class="lg:col-span-4 space-y-6">
+            <div class="glass p-6 rounded-2xl">
+                <h3 class="font-bold mb-6 flex items-center gap-2"><i data-lucide="bar-chart-3" class="text-blue-400"></i> Rendimiento por Activo</h3>
+                <div class="h-64">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+            <div class="glass p-6 rounded-2xl">
+                <h3 class="font-bold mb-6 flex items-center gap-2"><i data-lucide="donut" class="text-emerald-400"></i> Distribución por Categoría</h3>
+                <div class="h-64">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FAB -->
+    <button onclick="openModal()" class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-2xl shadow-blue-500/40 flex items-center gap-2 transition-all hover:scale-110 z-40">
+        <i data-lucide="plus-circle"></i>
+        <span class="font-bold pr-2">Administrar Posición</span>
+    </button>
+
+    <!-- Modal Formulario -->
+    <div id="modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="glass w-full max-w-md rounded-3xl p-8 shadow-2xl border border-white/10">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">Nueva Posición</h2>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition-colors"><i data-lucide="x"></i></button>
+            </div>
+            <form id="assetForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Nombre del Activo / Ticker</label>
+                    <input type="text" id="f-name" required class="w-full p-3 rounded-xl outline-none" placeholder="Ej: Apple Inc o AAPL">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Tipo</label>
+                        <select id="f-type" class="w-full p-3 rounded-xl outline-none">
+                            <option value="Acciones">Acciones</option>
+                            <option value="Crypto">Criptomonedas</option>
+                            <option value="Commodity">Commodities</option>
+                            <option value="ETF">ETFs</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Cantidad</label>
+                        <input type="number" step="any" id="f-qty" required class="w-full p-3 rounded-xl outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Precio Compra</label>
+                        <input type="number" step="any" id="f-buy" required class="w-full p-3 rounded-xl outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Precio Actual</label>
+                        <input type="number" step="any" id="f-current" required class="w-full p-3 rounded-xl outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold mt-4 shadow-lg shadow-blue-600/20">
+                    Confirmar Operación
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- Datos de Ejemplo ---
+        let portfolio = [
+            { id: 1, name: "Apple Inc (AAPL)", type: "Acciones", qty: 10, buyPrice: 150.00, currentPrice: 185.20 },
+            { id: 2, name: "Bitcoin (BTC)", type: "Crypto", qty: 0.5, buyPrice: 28000.00, currentPrice: 52400.00 },
+            { id: 3, name: "Tesla (TSLA)", type: "Acciones", qty: 15, buyPrice: 240.00, currentPrice: 195.50 },
+            { id: 4, name: "S&P 500 ETF (VOO)", type: "ETF", qty: 25, buyPrice: 380.00, currentPrice: 460.10 },
+            { id: 5, name: "Gold (GLD)", type: "Commodity", qty: 100, buyPrice: 18.50, currentPrice: 19.80 }
+        ];
+
+        let barChart, pieChart;
+        let currentSort = { key: 'name', asc: true };
+
+        // --- Inicialización ---
+        window.onload = () => {
+            lucide.createIcons();
+            updateUI();
+            
+            // Listeners para filtros
+            document.getElementById('searchInput').addEventListener('input', updateUI);
+            document.getElementById('typeFilter').addEventListener('change', updateUI);
+            document.getElementById('assetForm').addEventListener('submit', handleAddAsset);
+        };
+
+        // --- Gestión de Interfaz ---
+        function updateUI() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+
+            // Filtrar datos
+            let filtered = portfolio.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(searchTerm);
+                const matchesType = typeFilter === 'All' || item.type === typeFilter;
+                return matchesSearch && matchesType;
+            });
+
+            // Ordenar
+            filtered.sort((a, b) => {
+                let valA = calculateMetrics(a)[currentSort.key] || a[currentSort.key];
+                let valB = calculateMetrics(b)[currentSort.key] || b[currentSort.key];
+                if (typeof valA === 'string') return currentSort.asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                return currentSort.asc ? valA - valB : valB - valA;
+            });
+
+            renderTable(filtered);
+            renderSummary();
+            renderCharts(filtered);
+        }
+
+        function calculateMetrics(item) {
+            const marketValue = item.qty * item.currentPrice;
+            const costBasis = item.qty * item.buyPrice;
+            const pl = marketValue - costBasis;
+            const yieldPerc = (pl / costBasis) * 100;
+            return { marketValue, pl, yield: yieldPerc };
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
+                const { marketValue, pl, yield: yieldPerc } = calculateMetrics(item);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="p-4 font-semibold text-white">${item.name}</td>
+                    <td class="p-4"><span class="bg-slate-800 px-2 py-1 rounded text-xs">${item.type}</span></td>
+                    <td class="p-4 text-right font-mono">${item.qty}</td>
+                    <td class="p-4 text-right text-slate-400">$${item.buyPrice.toLocaleString()}</td>
+                    <td class="p-4 text-right font-bold">$${item.currentPrice.toLocaleString()}</td>
+                    <td class="p-4 text-right font-bold">$${marketValue.toLocaleString()}</td>
+                    <td class="p-4 text-right font-bold ${yieldPerc >= 0 ? 'positive' : 'negative'}">
+                        ${yieldPerc >= 0 ? '↑' : '↓'} ${Math.abs(yieldPerc).toFixed(2)}%
+                    </td>
+                    <td class="p-4 text-right">
+                        <button onclick="deleteAsset(${item.id})" class="text-slate-600 hover:text-red-400 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        function renderSummary() {
+            let totalValue = 0, totalCost = 0;
+            portfolio.forEach(item => {
+                totalValue += item.qty * item.currentPrice;
+                totalCost += item.qty * item.buyPrice;
+            });
+
+            const totalPL = totalValue - totalCost;
+            const totalYield = ((totalValue / totalCost) - 1) * 100;
+
+            document.getElementById('total-value').innerText = `$${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('total-pl').innerText = `${totalPL >= 0 ? '+' : ''}$${totalPL.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('total-yield').innerText = `${totalYield >= 0 ? '+' : ''}${totalYield.toFixed(2)}%`;
+            
+            const plEl = document.getElementById('total-pl');
+            const yieldEl = document.getElementById('total-yield');
+            plEl.className = `text-3xl font-bold ${totalPL >= 0 ? 'positive' : 'negative'}`;
+            yieldEl.className = `text-3xl font-bold ${totalYield >= 0 ? 'positive' : 'negative'}`;
+        }
+
+        function renderCharts(data) {
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            const ctxPie = document.getElementById('pieChart').getContext('2d');
+
+            if (barChart) barChart.destroy();
+            if (pieChart) pieChart.destroy();
+
+            // Lógica Pie Chart (Agrupar por tipo)
+            const groups = data.reduce((acc, curr) => {
+                acc[curr.type] = (acc[curr.type] || 0) + (curr.qty * curr.currentPrice);
+                return acc;
+            }, {});
+
+            barChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: data.map(i => i.name.split(' ')[0]),
+                    datasets: [{
+                        label: 'Rendimiento %',
+                        data: data.map(i => calculateMetrics(i).yield),
+                        backgroundColor: data.map(i => calculateMetrics(i).yield >= 0 ? '#10b981' : '#f43f5e'),
+                        borderRadius: 8
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } } }
+                }
+            });
+
+            pieChart = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(groups),
+                    datasets: [{
+                        data: Object.values(groups),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'],
+                        borderWidth: 0,
+                        hoverOffset: 15
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 20 } } },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        // --- Acciones ---
+        function sortTable(key) {
+            if (currentSort.key === key) currentSort.asc = !currentSort.asc;
+            else { currentSort.key = key; currentSort.asc = true; }
+            updateUI();
+        }
+
+        function openModal() { document.getElementById('modal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+        function handleAddAsset(e) {
+            e.preventDefault();
+            const newItem = {
+                id: Date.now(),
+                name: document.getElementById('f-name').value,
+                type: document.getElementById('f-type').value,
+                qty: parseFloat(document.getElementById('f-qty').value),
+                buyPrice: parseFloat(document.getElementById('f-buy').value),
+                currentPrice: parseFloat(document.getElementById('f-current').value)
+            };
+            portfolio.push(newItem);
+            document.getElementById('assetForm').reset();
+            closeModal();
+            updateUI();
+        }
+
+        function deleteAsset(id) {
+            if(confirm('¿Seguro que desea eliminar esta posición?')) {
+                portfolio = portfolio.filter(i => i.id !== id);
+                updateUI();
+            }
+        }
+    </script>
+</body>
+</html>

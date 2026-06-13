@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Predictive Engine | ML Signals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #020617; 
+            color: #f1f5f9;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        
+        /* Estilos de Señales */
+        .signal-buy { color: #10b981; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .signal-sell { color: #f43f5e; background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); }
+        .signal-hold { color: #f59e0b; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); }
+
+        input, select { background: #1e293b !important; border: 1px solid #334155 !important; color: white; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Header & Filtros -->
+    <header class="max-w-7xl mx-auto mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center gap-3">
+                <i data-lucide="brain-circuit" class="text-blue-500"></i> ML Predictive Engine
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">Algoritmos: SVC & VotingClassifier Ensemble</p>
+        </div>
+
+        <div class="flex flex-wrap gap-3 items-center">
+            <div class="flex items-center gap-2 glass p-2 rounded-xl">
+                <select id="assetSelect" class="px-3 py-1.5 rounded-lg text-sm outline-none w-40" onchange="updateDashboard()">
+                    <option value="BTC">Bitcoin (BTC)</option>
+                    <option value="AAPL">Apple (AAPL)</option>
+                    <option value="TSLA">Tesla (TSLA)</option>
+                    <option value="ETH">Ethereum (ETH)</option>
+                </select>
+                <select id="dateRange" class="px-3 py-1.5 rounded-lg text-sm outline-none">
+                    <option value="7d">Últimos 7 días</option>
+                    <option value="30d" selected>Últimos 30 días</option>
+                    <option value="90d">Últimos 90 días</option>
+                </select>
+            </div>
+            <button onclick="simulateNewPrediction()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20">
+                <i data-lucide="refresh-cw" id="refresh-icon"></i> Generar Predicción
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Panel Izquierdo: Gráfico Principal -->
+        <div class="lg:col-span-8 space-y-6">
+            <div class="glass rounded-2xl p-6 relative">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold text-lg flex items-center gap-2">
+                        <i data-lucide="line-chart" class="text-blue-400"></i> Análisis Temporal e IA
+                    </h3>
+                    <div class="flex gap-4 text-xs font-semibold">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-500 rounded-full"></span> Precio</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 bg-emerald-500 rounded-full"></span> Predicción Futura</span>
+                    </div>
+                </div>
+                <div class="h-[400px]">
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Tabla de Historial -->
+            <div class="glass rounded-2xl overflow-hidden">
+                <div class="p-6 border-b border-white/5">
+                    <h3 class="font-bold">Historial de Predicciones Recientes</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-800/50 text-slate-400 font-semibold">
+                            <tr>
+                                <th class="p-4">Fecha/Hora</th>
+                                <th class="p-4">Activo</th>
+                                <th class="p-4 text-center">Señal IA</th>
+                                <th class="p-4">Confianza</th>
+                                <th class="p-4">Modelo Origen</th>
+                                <th class="p-4">Estatus</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody" class="divide-y divide-white/5">
+                            <!-- Inyectado via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Derecho: Señales y Confianza -->
+        <div class="lg:col-span-4 space-y-6">
+            
+            <!-- Señal Consolidada (VotingClassifier) -->
+            <div class="glass rounded-2xl p-6 border-l-4 border-emerald-500" id="mainSignalCard">
+                <p class="text-xs text-slate-400 uppercase font-bold tracking-widest mb-4">Señal Consolidada (Ensemble)</p>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h2 id="currentSignal" class="text-5xl font-black mb-2">BUY</h2>
+                        <p class="text-emerald-400 font-semibold flex items-center gap-1">
+                            <i data-lucide="trending-up" class="w-4 h-4"></i> Confianza: <span id="confidenceScore">89.4%</span>
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <span class="px-2 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded uppercase">VotingClassifier</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparativa de Modelos -->
+            <div class="glass rounded-2xl p-6">
+                <h4 class="text-sm font-bold mb-6 flex items-center gap-2">
+                    <i data-lucide="git-branch" class="text-indigo-400"></i> Desglose por Modelo
+                </h4>
+                <div class="space-y-6">
+                    <!-- Modelo SVC -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="font-bold flex items-center gap-1">SVC (Support Vector) <span class="bg-emerald-500/20 text-emerald-400 px-1.5 rounded">BUY</span></span>
+                            <span class="mono">82%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-emerald-500 h-full w-[82%]"></div>
+                        </div>
+                    </div>
+                    <!-- Modelo Voting -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="font-bold flex items-center gap-1">VotingClassifier <span class="bg-emerald-500/20 text-emerald-400 px-1.5 rounded">BUY</span></span>
+                            <span class="mono">94%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-blue-500 h-full w-[94%]"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 p-4 bg-slate-900/50 rounded-xl border border-white/5">
+                    <p class="text-xs text-slate-400 italic">
+                        "El VotingClassifier muestra una alta correlación alcista. El modelo SVC confirma la tendencia con una frontera de decisión robusta."
+                    </p>
+                </div>
+            </div>
+
+            <!-- Indicadores Técnicos IA -->
+            <div class="glass rounded-2xl p-6">
+                <h4 class="text-sm font-bold mb-4">Factores de Decisión</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-3 bg-slate-800/40 rounded-xl text-center">
+                        <p class="text-[10px] text-slate-500 uppercase">Volatilidad</p>
+                        <p class="text-sm font-bold text-rose-400">Alta</p>
+                    </div>
+                    <div class="p-3 bg-slate-800/40 rounded-xl text-center">
+                        <p class="text-[10px] text-slate-500 uppercase">Momentum</p>
+                        <p class="text-sm font-bold text-emerald-400">Bullish</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let chartInstance = null;
+
+        // --- Datos de Ejemplo Realistas ---
+        const assetData = {
+            BTC: {
+                prices: [42000, 42500, 41800, 43000, 44500, 44200, 45000, 46200, 45800, 47000],
+                future: [47500, 48200, 49500, 49100],
+                signal: 'BUY',
+                confidence: '92.4%',
+                color: '#10b981'
+            },
+            AAPL: {
+                prices: [185, 182, 183, 180, 178, 179, 177, 175, 176, 174],
+                future: [172, 170, 168, 169],
+                signal: 'SELL',
+                confidence: '85.1%',
+                color: '#f43f5e'
+            },
+            TSLA: {
+                prices: [210, 215, 212, 218, 220, 219, 221, 220, 222, 221],
+                future: [221, 222, 221, 223],
+                signal: 'HOLD',
+                confidence: '64.8%',
+                color: '#f59e0b'
+            }
+        };
+
+        const historyData = [
+            { date: '2023-10-25 14:30', asset: 'BTC', signal: 'BUY', confidence: '88%', model: 'Voting', status: 'Exitoso' },
+            { date: '2023-10-25 10:15', asset: 'TSLA', signal: 'HOLD', confidence: '71%', model: 'SVC', status: 'Pendiente' },
+            { date: '2023-10-24 18:00', asset: 'AAPL', signal: 'SELL', confidence: '94%', model: 'Voting', status: 'Exitoso' },
+            { date: '2023-10-24 09:00', asset: 'ETH', signal: 'BUY', confidence: '82%', model: 'SVC', status: 'Fallido' },
+        ];
+
+        // --- Inicialización ---
+        window.onload = () => {
+            lucide.createIcons();
+            updateDashboard();
+            renderHistory();
+        };
+
+        function updateDashboard() {
+            const asset = document.getElementById('assetSelect').value;
+            const data = assetData[asset] || assetData['BTC'];
+
+            updateSignalUI(data);
+            renderChart(data);
+        }
+
+        function updateSignalUI(data) {
+            const signalCard = document.getElementById('mainSignalCard');
+            const signalText = document.getElementById('currentSignal');
+            const confidenceText = document.getElementById('confidenceScore');
+
+            signalText.innerText = data.signal;
+            confidenceText.innerText = data.confidence;
+
+            // Resetear colores
+            signalCard.style.borderLeftColor = data.color;
+            signalText.className = `text-5xl font-black mb-2`;
+            signalText.style.color = data.color;
+        }
+
+        function renderChart(data) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            
+            if (chartInstance) chartInstance.destroy();
+
+            const historyLabels = Array.from({length: data.prices.length}, (_, i) => `D-${9-i}`);
+            const futureLabels = Array.from({length: data.future.length}, (_, i) => `F+${i+1}`);
+            
+            const fullLabels = [...historyLabels, ...futureLabels];
+            const futurePoints = [...new Array(data.prices.length - 1).fill(null), data.prices[data.prices.length-1], ...data.future];
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: fullLabels,
+                    datasets: [
+                        {
+                            label: 'Precio Histórico',
+                            data: [...data.prices, ...new Array(data.future.length).fill(null)],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                        },
+                        {
+                            label: 'Predicción IA',
+                            data: futurePoints,
+                            borderColor: data.color,
+                            borderDash: [5, 5],
+                            backgroundColor: 'transparent',
+                            tension: 0.4,
+                            pointStyle: 'triangle',
+                            pointRadius: 6,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { 
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderHistory() {
+            const tbody = document.getElementById('historyBody');
+            tbody.innerHTML = historyData.map(row => `
+                <tr class="hover:bg-white/5 transition-colors">
+                    <td class="p-4 text-slate-400 mono text-xs">${row.date}</td>
+                    <td class="p-4 font-bold">${row.asset}</td>
+                    <td class="p-4 text-center">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold ${row.signal === 'BUY' ? 'signal-buy' : row.signal === 'SELL' ? 'signal-sell' : 'signal-hold'}">
+                            ${row.signal}
+                        </span>
+                    </td>
+                    <td class="p-4 font-mono">${row.confidence}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-0.5 border border-white/10 rounded text-[10px] text-slate-400">${row.model}</span>
+                    </td>
+                    <td class="p-4">
+                        <span class="${row.status === 'Exitoso' ? 'text-emerald-400' : row.status === 'Fallido' ? 'text-rose-400' : 'text-slate-500'} text-xs font-semibold">
+                            ${row.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function simulateNewPrediction() {
+            const btnIcon = document.getElementById('refresh-icon');
+            btnIcon.classList.add('animate-spin');
+            
+            setTimeout(() => {
+                btnIcon.classList.remove('animate-spin');
+                alert('Motor de IA: Datos actualizados. SVC y VotingClassifier han recalculado las fronteras de decisión con los últimos ticks del mercado.');
+                updateDashboard();
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
